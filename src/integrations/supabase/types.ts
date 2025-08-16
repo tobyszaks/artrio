@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_logs: {
+        Row: {
+          action_type: string
+          admin_id: string
+          created_at: string
+          description: string
+          id: string
+          metadata: Json | null
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action_type: string
+          admin_id: string
+          created_at?: string
+          description: string
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action_type?: string
+          admin_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
       age_verification_attempts: {
         Row: {
           attempt_date: string
@@ -35,6 +68,42 @@ export type Database = {
           id?: string
           ip_address?: unknown | null
           user_agent?: string | null
+        }
+        Relationships: []
+      }
+      moderation_actions: {
+        Row: {
+          action_type: string
+          created_at: string
+          duration_hours: number | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          moderator_id: string
+          reason: string
+          target_user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          duration_hours?: number | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          moderator_id: string
+          reason: string
+          target_user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          duration_hours?: number | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          moderator_id?: string
+          reason?: string
+          target_user_id?: string
         }
         Relationships: []
       }
@@ -146,6 +215,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reported_content: {
+        Row: {
+          content_id: string
+          content_type: string
+          created_at: string
+          description: string | null
+          id: string
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+          resolution_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          content_id: string
+          content_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+          resolution_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          content_id?: string
+          content_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          reason?: string
+          reported_user_id?: string
+          reporter_id?: string
+          resolution_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: []
       }
       safe_profiles: {
         Row: {
@@ -264,6 +378,21 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      is_user_banned: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      log_admin_action: {
+        Args: {
+          p_action_type: string
+          p_admin_id: string
+          p_description?: string
+          p_metadata?: Json
+          p_target_id?: string
+          p_target_type?: string
+        }
+        Returns: string
       }
       populate_safe_profiles: {
         Args: Record<PropertyKey, never>
