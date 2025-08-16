@@ -61,7 +61,8 @@ const Home = () => {
   const [replies, setReplies] = useState<Reply[]>([]);
   const [newPost, setNewPost] = useState('');
   const [newReply, setNewReply] = useState('');
-  const [hasPostedToday, setHasPostedToday] = useState(false);
+  const [lastPostTime, setLastPostTime] = useState<Date | null>(null);
+  const [postCooldownRemaining, setPostCooldownRemaining] = useState(0);
   const [loading, setLoading] = useState(true);
   const [mediaUrl, setMediaUrl] = useState<string>('');
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
@@ -169,9 +170,17 @@ const Home = () => {
         setPosts(postsWithProfiles);
       }
       
-      // Check if current user has posted today
-      const userPost = postsData?.find(post => post.user_id === user?.id);
-      setHasPostedToday(!!userPost);
+      // Check user's last post time for cooldown
+      const userPosts = postsData?.filter(post => post.user_id === user?.id) || [];
+      if (userPosts.length > 0) {
+        // Get the most recent post
+        const mostRecentPost = userPosts.reduce((latest, post) => {
+          return new Date(post.created_at) > new Date(latest.created_at) ? post : latest;
+        });
+        setLastPostTime(new Date(mostRecentPost.created_at));
+      } else {
+        setLastPostTime(null);
+      }
 
       // Fetch replies for all posts
       if (postsData && postsData.length > 0) {
@@ -209,8 +218,28 @@ const Home = () => {
     }
   };
 
+  // Calculate cooldown timer
+  useEffect(() => {
+    if (!lastPostTime) {
+      setPostCooldownRemaining(0);
+      return;
+    }
+
+    const calculateCooldown = () => {
+      const now = new Date();
+      const timeSinceLastPost = now.getTime() - lastPostTime.getTime();
+      const cooldownMs = 10 * 60 * 1000; // 10 minutes in milliseconds
+      const remaining = Math.max(0, cooldownMs - timeSinceLastPost);
+      setPostCooldownRemaining(Math.ceil(remaining / 1000)); // Convert to seconds
+    };
+
+    calculateCooldown();
+    const interval = setInterval(calculateCooldown, 1000);
+    return () => clearInterval(interval);
+  }, [lastPostTime]);
+
   const handlePostSubmit = async () => {
-    if ((!newPost.trim() && !mediaUrl) || !currentTrio || hasPostedToday) return;
+    if ((!newPost.trim() && !mediaUrl) || !currentTrio || postCooldownRemaining > 0) return;
 
     try {
       const { error } = await supabase
@@ -235,7 +264,7 @@ const Home = () => {
       setNewPost('');
       setMediaUrl('');
       setMediaType(null);
-      setHasPostedToday(true);
+      setLastPostTime(new Date());
       toast({
         title: 'Post sent!',
         description: 'Your post has been shared with your trio'
@@ -387,11 +416,11 @@ const Home = () => {
                   placeholder="What's happening?"
                   value={newPost}
                   onChange={(e) => setNewPost(e.target.value)}
-                  disabled={hasPostedToday}
+                  disabled={postCooldownRemaining > 0}
                   className="min-h-[80px] resize-none"
                 />
                 
-                {!hasPostedToday && (
+                {postCooldownRemaining === 0 && (
                   <MediaUpload 
                     onMediaUploaded={handleMediaUploaded}
                     className="w-full"
@@ -400,17 +429,17 @@ const Home = () => {
                 
                 <Button 
                   onClick={handlePostSubmit}
-                  disabled={(!newPost.trim() && !mediaUrl) || hasPostedToday}
+                  disabled={(!newPost.trim() && !mediaUrl) || postCooldownRemaining > 0}
                   className="w-full"
                   size="lg"
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  {hasPostedToday ? 'Posted for today' : 'Share'}
+                  {postCooldownRemaining > 0 ? `Wait ${Math.floor(postCooldownRemaining / 60)}:${(postCooldownRemaining % 60).toString().padStart(2, '0')}` : 'Share'}
                 </Button>
                 
-                {hasPostedToday && (
+                {postCooldownRemaining > 0 && (
                   <p className="text-sm text-muted-foreground text-center">
-                    One post per day. New trio tomorrow!
+                    You can post again in {Math.floor(postCooldownRemaining / 60)} minutes {postCooldownRemaining % 60} seconds
                   </p>
                 )}
               </CardContent>
