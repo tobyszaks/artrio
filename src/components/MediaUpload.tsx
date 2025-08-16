@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Camera, Image, Video, X, Upload } from 'lucide-react';
+import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 interface MediaUploadProps {
   onMediaUploaded: (mediaUrl: string, mediaType: 'image' | 'video') => void;
@@ -51,6 +52,66 @@ export default function MediaUpload({ onMediaUploaded, className = '' }: MediaUp
     setPreview(objectUrl);
 
     await uploadFile(file, type);
+  };
+
+  const handleCameraCapture = async () => {
+    try {
+      const image = await CapacitorCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera
+      });
+
+      if (image.dataUrl) {
+        setPreview(image.dataUrl);
+        setMediaType('image');
+        
+        // Convert dataUrl to blob
+        const response = await fetch(image.dataUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `camera-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        
+        await uploadFile(file, 'image');
+      }
+    } catch (error) {
+      console.error('Camera error:', error);
+      toast({
+        variant: "destructive",
+        title: "Camera error",
+        description: "Failed to access camera"
+      });
+    }
+  };
+
+  const handleGallerySelect = async () => {
+    try {
+      const image = await CapacitorCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Photos
+      });
+
+      if (image.dataUrl) {
+        setPreview(image.dataUrl);
+        setMediaType('image');
+        
+        // Convert dataUrl to blob
+        const response = await fetch(image.dataUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `gallery-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        
+        await uploadFile(file, 'image');
+      }
+    } catch (error) {
+      console.error('Gallery error:', error);
+      toast({
+        variant: "destructive",
+        title: "Gallery error", 
+        description: "Failed to access photo gallery"
+      });
+    }
   };
 
   const uploadFile = async (file: File, type: 'image' | 'video') => {
@@ -144,30 +205,30 @@ export default function MediaUpload({ onMediaUploaded, className = '' }: MediaUp
   }
 
   return (
-    <div className={`flex gap-2 ${className}`}>
-      <label className="flex-1">
-        <input
-          type="file"
-          accept="image/*,video/*"
-          onChange={handleFileSelect}
-          className="hidden"
-          disabled={uploading}
-        />
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full flex items-center gap-2"
-          disabled={uploading}
-          asChild
-        >
-          <span>
-            <Image className="h-4 w-4" />
-            Photo
-          </span>
-        </Button>
-      </label>
+    <div className={`grid grid-cols-3 gap-2 ${className}`}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleCameraCapture}
+        disabled={uploading}
+        className="flex flex-col items-center gap-1 h-16"
+      >
+        <Camera className="h-5 w-5" />
+        <span className="text-xs">Camera</span>
+      </Button>
       
-      <label className="flex-1">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleGallerySelect}
+        disabled={uploading}
+        className="flex flex-col items-center gap-1 h-16"
+      >
+        <Image className="h-5 w-5" />
+        <span className="text-xs">Gallery</span>
+      </Button>
+      
+      <label className="contents">
         <input
           type="file"
           accept="video/*"
@@ -178,13 +239,13 @@ export default function MediaUpload({ onMediaUploaded, className = '' }: MediaUp
         <Button
           variant="outline"
           size="sm"
-          className="w-full flex items-center gap-2"
           disabled={uploading}
+          className="flex flex-col items-center gap-1 h-16"
           asChild
         >
           <span>
-            <Video className="h-4 w-4" />
-            Video
+            <Video className="h-5 w-5" />
+            <span className="text-xs">Video</span>
           </span>
         </Button>
       </label>
