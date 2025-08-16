@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                        'https://artrio-production.up.railway.app' || 
                        `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -84,7 +84,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     });
-    return { error };
+
+    if (authError) {
+      return { error: authError };
+    }
+
+    // If signup succeeded but user exists (email already registered)
+    if (authData?.user && !authError) {
+      // Try to manually create profile if it doesn't exist
+      // This handles cases where the trigger might have failed
+      try {
+        // Check if profile exists
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', authData.user.id)
+          .single();
+
+        if (!existingProfile) {
+          // Create profile manually
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              user_id: authData.user.id,
+              username: userData.username,
+              bio: userData.bio || null,
+              avatar_url: null
+            });
+
+          if (profileError && !profileError.message.includes('duplicate')) {
+            console.error('Profile creation error:', profileError);
+          }
+
+          // Create sensitive data entry
+          const { error: sensitiveError } = await supabase
+            .from('sensitive_user_data')
+            .insert({
+              user_id: authData.user.id,
+              birthday: userData.birthday
+            });
+
+          if (sensitiveError && !sensitiveError.message.includes('duplicate')) {
+            console.error('Sensitive data creation error:', sensitiveError);
+          }
+        }
+      } catch (err) {
+        console.error('Error ensuring profile exists:', err);
+      }
+    }
+
+    return { error: authError };
   };
 
   const signIn = async (email: string, password: string) => {

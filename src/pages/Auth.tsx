@@ -207,43 +207,19 @@ const Auth = () => {
         });
 
         if (error) {
+          console.error('Signup error details:', error);
+          
           // Provide more specific error messages
           let errorMessage = error.message;
           
           if (error.message.includes('duplicate') || error.message.includes('unique') || error.message.includes('already registered')) {
-            // Try with auto-generated username
-            const newUsername = await generateUniqueUsername(username);
-            const retryResult = await signUp(email, password, {
-              username: newUsername,
-              birthday: format(birthday, 'yyyy-MM-dd'),
-              bio
-            });
-            
-            if (!retryResult.error) {
-              toast({
-                title: 'Success!',
-                description: `Account created with username: ${newUsername}. Check your email to confirm.`
-              });
-              return;
-            }
-            errorMessage = 'This email might already be registered. Try signing in instead.';
+            errorMessage = 'This email is already registered. Try signing in instead.';
           } else if (error.message.includes('Database error') || error.message.includes('profiles')) {
-            // Database error - try with modified username
-            const newUsername = `${username}${Math.floor(Math.random() * 9999)}`;
-            const retryResult = await signUp(email, password, {
-              username: newUsername,
-              birthday: format(birthday, 'yyyy-MM-dd'),
-              bio
-            });
-            
-            if (!retryResult.error) {
-              toast({
-                title: 'Success!',
-                description: `Account created with username: ${newUsername}. Check your email to confirm.`
-              });
-              return;
-            }
-            errorMessage = 'Could not create account. Please try again with a different username.';
+            errorMessage = 'Database error. Please try again in a moment.';
+          } else if (error.message.includes('Invalid login credentials')) {
+            errorMessage = 'Invalid email or password format.';
+          } else if (error.message.includes('Password should be at least')) {
+            errorMessage = 'Password must be at least 6 characters long.';
           }
           
           toast({
@@ -254,8 +230,15 @@ const Auth = () => {
         } else {
           toast({
             title: 'Success!',
-            description: 'Check your email to confirm your account'
+            description: 'Check your email to confirm your account. You may need to check your spam folder.'
           });
+          
+          // Clear form
+          setEmail('');
+          setPassword('');
+          setUsername('');
+          setBirthdayText('');
+          setBio('');
         }
       } else {
         const { error } = await signIn(email, password);
