@@ -24,7 +24,7 @@ jobs:
       
       - name: Add Toby's repo as remote
         run: |
-          git remote add lovable https://github.com/tobyszaks/rantrio.git || true
+          git remote add lovable https://github.com/tobyszaks/artrio.git || true
           git fetch lovable main --no-tags
       
       - name: Check for changes
@@ -46,7 +46,7 @@ jobs:
         if: steps.check.outputs.has_changes == 'true'
         run: |
           # Try to merge Toby's changes
-          git merge lovable/main -m "🔄 Auto-sync from Lovable (tobyszaks/rantrio)" --no-edit || {
+          git merge lovable/main -m "🔄 Auto-sync from Lovable (tobyszaks/artrio)" --no-edit || {
             # If merge fails, try rebase
             echo "Merge failed, attempting rebase..."
             git rebase --abort 2>/dev/null || true

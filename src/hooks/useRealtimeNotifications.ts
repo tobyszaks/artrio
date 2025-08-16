@@ -3,13 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
-interface GroupNotification {
-  type: 'group_formed';
+interface TrioNotification {
+  type: 'trio_formed';
   title: string;
   message: string;
   metadata: {
     trio_id: string;
-    group_size: number;
+    trio_size: number;
     date: string;
   };
 }
@@ -38,16 +38,18 @@ export function useRealtimeNotifications() {
           
           // Show different types of notifications
           switch (notification.type) {
-            case 'group_formed':
+            case 'trio_formed':
+            case 'group_formed': // Backward compatibility
               toast({
-                title: "🎉 Your group is ready!",
-                description: `You've been matched with ${notification.metadata.group_size - 1} other users for today.`,
+                title: "🎉 Your trio is ready!",
+                description: `You've been matched with ${(notification.metadata.trio_size || notification.metadata.group_size) - 1} other users for today.`,
                 duration: 6000,
               });
               break;
-            case 'group_reminder':
+            case 'trio_reminder':
+            case 'group_reminder': // Backward compatibility
               toast({
-                title: "📱 Group reminder",
+                title: "📱 Trio reminder",
                 description: notification.message,
                 duration: 4000,
               });
@@ -80,8 +82,8 @@ export function useRealtimeNotifications() {
           console.log('New trio formed with user:', payload);
           // This is a backup notification in case the trigger doesn't work
           toast({
-            title: "🎉 New group formed!",
-            description: "Check your notifications for details about your new group.",
+            title: "🎉 New trio formed!",
+            description: "Check your notifications for details about your new trio.",
             duration: 5000,
           });
         }

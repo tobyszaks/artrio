@@ -15,7 +15,7 @@ jobs:
           
       - name: Add upstream
         run: |
-          git remote add lovable https://github.com/tobyszaks/rantrio.git || true
+          git remote add lovable https://github.com/tobyszaks/artrio.git || true
           
       - name: Fetch and merge
         run: |

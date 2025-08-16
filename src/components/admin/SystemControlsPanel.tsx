@@ -13,7 +13,7 @@ export default function SystemControlsPanel() {
     setLoading(prev => ({ ...prev, [key]: isLoading }));
   };
 
-  const triggerGroupRandomization = async () => {
+  const triggerTrioRandomization = async () => {
     setButtonLoading('randomize', true);
     try {
       const { error } = await supabase.functions.invoke('randomize-trios');
@@ -24,19 +24,19 @@ export default function SystemControlsPanel() {
       await supabase.rpc('log_admin_action', {
         p_admin_id: currentUser.data.user?.id,
         p_action_type: 'system_control',
-        p_description: 'Manually triggered group randomization'
+        p_description: 'Manually triggered trio randomization'
       });
 
       toast({
         title: "Success",
-        description: "Group randomization triggered successfully"
+        description: "Trio randomization triggered successfully"
       });
     } catch (error) {
       console.error('Error triggering randomization:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to trigger group randomization"
+        description: "Failed to trigger trio randomization"
       });
     } finally {
       setButtonLoading('randomize', false);
@@ -149,14 +149,14 @@ export default function SystemControlsPanel() {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Button
-            onClick={triggerGroupRandomization}
+            onClick={triggerTrioRandomization}
             disabled={loading.randomize}
             className="h-20 flex flex-col gap-2"
           >
             <Users className="h-6 w-6" />
             <div className="text-center">
-              <div className="font-medium">Randomize Groups</div>
-              <div className="text-xs opacity-80">Create new daily groups</div>
+              <div className="font-medium">Randomize Trios</div>
+              <div className="text-xs opacity-80">Create new daily trios</div>
             </div>
           </Button>
 
@@ -194,8 +194,8 @@ export default function SystemControlsPanel() {
           >
             <Trash2 className="h-6 w-6" />
             <div className="text-center">
-              <div className="font-medium">Delete Today's Groups</div>
-              <div className="text-xs opacity-80">Remove current daily groups</div>
+              <div className="font-medium">Delete Today's Trios</div>
+              <div className="text-xs opacity-80">Remove current daily trios</div>
             </div>
           </Button>
         </div>
@@ -203,7 +203,7 @@ export default function SystemControlsPanel() {
         <div className="mt-6 p-4 bg-muted rounded-lg">
           <h4 className="font-medium mb-2">⚠️ Important Notes</h4>
           <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• Group randomization runs automatically daily</li>
+            <li>• Trio randomization runs automatically daily</li>
             <li>• Content cleanup happens automatically via cron jobs</li>
             <li>• Use manual controls only when necessary</li>
             <li>• All actions are logged for audit purposes</li>

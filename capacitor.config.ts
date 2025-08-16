@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.szakacsmedia.rantrio',
-  appName: 'Rantrio',
+  appId: 'com.szakacsmedia.artrio',
+  appName: 'Artrio',
   webDir: 'dist',
   plugins: {
     SplashScreen: {

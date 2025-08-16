@@ -75,7 +75,7 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
           setNotifications(prev => [newNotification, ...prev]);
           
           // Show toast for new notifications
-          if (newNotification.type === 'group_formed') {
+          if (newNotification.type === 'trio_formed' || newNotification.type === 'group_formed') {
             toast({
               title: newNotification.title,
               description: newNotification.message,
@@ -131,16 +131,24 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'group_formed': return <Users className="h-4 w-4" />;
-      case 'group_reminder': return <Calendar className="h-4 w-4" />;
+      case 'trio_formed':
+      case 'group_formed': // Backward compatibility
+        return <Users className="h-4 w-4" />;
+      case 'trio_reminder':
+      case 'group_reminder': // Backward compatibility
+        return <Calendar className="h-4 w-4" />;
       default: return <Bell className="h-4 w-4" />;
     }
   };
 
   const getNotificationColor = (type: string) => {
     switch (type) {
-      case 'group_formed': return 'default';
-      case 'group_reminder': return 'secondary';
+      case 'trio_formed':
+      case 'group_formed': // Backward compatibility
+        return 'default';
+      case 'trio_reminder':
+      case 'group_reminder': // Backward compatibility
+        return 'secondary';
       default: return 'outline';
     }
   };

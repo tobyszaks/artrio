@@ -109,18 +109,18 @@ Deno.serve(async (req) => {
     const shuffled = [...eligibleProfiles].sort(() => Math.random() - 0.5)
     
     // Group into trios with dynamic sizing for remainders
-    const groups = []
+    const trios = []
     const totalUsers = shuffled.length
     
-    // Calculate how many complete groups of 3 we can make
-    const completeGroups = Math.floor(totalUsers / 3)
+    // Calculate how many complete trios of 3 we can make
+    const completeTrios = Math.floor(totalUsers / 3)
     const remainingUsers = totalUsers % 3
     
     let userIndex = 0
     
-    // Create complete groups of 3
-    for (let i = 0; i < completeGroups; i++) {
-      groups.push({
+    // Create complete trios of 3
+    for (let i = 0; i < completeTrios; i++) {
+      trios.push({
         user1_id: shuffled[userIndex].user_id,
         user2_id: shuffled[userIndex + 1].user_id,
         user3_id: shuffled[userIndex + 2].user_id,
@@ -133,23 +133,23 @@ Deno.serve(async (req) => {
     
     // Handle remaining users
     if (remainingUsers > 0) {
-      if (remainingUsers === 1 && groups.length > 0) {
-        // Add the remaining user to the last group (making it a group of 4)
-        groups[groups.length - 1].user4_id = shuffled[userIndex].user_id
-      } else if (remainingUsers === 2 && groups.length > 0) {
-        // Add the remaining 2 users to the last group (making it a group of 5)
-        groups[groups.length - 1].user4_id = shuffled[userIndex].user_id
-        groups[groups.length - 1].user5_id = shuffled[userIndex + 1].user_id
-      } else if (remainingUsers === 2 && groups.length === 0) {
-        // If we only have 2 users total, they don't get a group (need at least 3)
-        console.log('Only 2 users available - insufficient for group formation')
+      if (remainingUsers === 1 && trios.length > 0) {
+        // Add the remaining user to the last trio (making it a trio of 4)
+        trios[trios.length - 1].user4_id = shuffled[userIndex].user_id
+      } else if (remainingUsers === 2 && trios.length > 0) {
+        // Add the remaining 2 users to the last trio (making it a trio of 5)
+        trios[trios.length - 1].user4_id = shuffled[userIndex].user_id
+        trios[trios.length - 1].user5_id = shuffled[userIndex + 1].user_id
+      } else if (remainingUsers === 2 && trios.length === 0) {
+        // If we only have 2 users total, they don't get a trio (need at least 3)
+        console.log('Only 2 users available - insufficient for trio formation')
       }
     }
 
-    if (groups.length === 0) {
-      console.log('No complete groups could be formed')
+    if (trios.length === 0) {
+      console.log('No complete trios could be formed')
       return new Response(
-        JSON.stringify({ message: 'No complete groups could be formed' }),
+        JSON.stringify({ message: 'No complete trios could be formed' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200 
@@ -157,19 +157,19 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log(`Creating ${groups.length} groups`)
+    console.log(`Creating ${trios.length} trios`)
 
-    // Insert the new groups
+    // Insert the new trios
     const { error: insertError } = await supabaseClient
       .from('trios')
-      .insert(groups)
+      .insert(trios)
 
     if (insertError) {
-      console.error('Error inserting groups:', insertError)
+      console.error('Error inserting trios:', insertError)
       throw insertError
     }
 
-    console.log(`Successfully created ${groups.length} groups for ${today}`)
+    console.log(`Successfully created ${trios.length} trios for ${today}`)
 
     // Clean up expired posts and replies
     const { error: cleanupError } = await supabaseClient.rpc('cleanup_expired_content')
@@ -183,8 +183,8 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        message: 'Group randomization completed successfully',
-        groups_created: groups.length,
+        message: 'Trio randomization completed successfully',
+        trios_created: trios.length,
         date: today
       }),
       { 

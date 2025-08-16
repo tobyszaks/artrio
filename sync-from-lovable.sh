@@ -3,10 +3,10 @@
 # Manual sync script to pull changes from Toby's Lovable repo
 # Run this anytime you need an immediate sync
 
-echo "🔄 Starting sync from Lovable (tobyszaks/rantrio)..."
+echo "🔄 Starting sync from Lovable (tobyszaks/artrio)..."
 
 # Add Toby's repo as remote if not exists
-git remote add lovable https://github.com/tobyszaks/rantrio.git 2>/dev/null || true
+git remote add lovable https://github.com/tobyszaks/artrio.git 2>/dev/null || true
 
 # Fetch latest from Toby's repo
 echo "📥 Fetching latest changes from Lovable..."
@@ -43,7 +43,7 @@ if git merge lovable/main -m "🔄 Manual sync from Lovable"; then
     if git push origin main; then
         echo "🚀 Successfully synced and pushed!"
         echo "Railway will deploy these changes in ~2-3 minutes"
-        echo "Check: https://rantrio-production.up.railway.app"
+        echo "Check: https://artrio-production.up.railway.app"
     else
         echo "❌ Push failed. Please check and push manually."
     fi
