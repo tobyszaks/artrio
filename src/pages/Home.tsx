@@ -24,6 +24,8 @@ interface Trio {
   user1_id: string;
   user2_id: string;
   user3_id: string;
+  user4_id: string | null;
+  user5_id: string | null;
   profiles: Profile[];
 }
 
@@ -67,12 +69,12 @@ const Home = () => {
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      // Fetch today's trio - simplified query
+      // Fetch today's group - check all user positions
       const { data: trio, error: trioError } = await supabase
         .from('trios')
         .select('*')
         .eq('date', today)
-        .or(`user1_id.eq.${user?.id},user2_id.eq.${user?.id},user3_id.eq.${user?.id}`)
+        .or(`user1_id.eq.${user?.id},user2_id.eq.${user?.id},user3_id.eq.${user?.id},user4_id.eq.${user?.id},user5_id.eq.${user?.id}`)
         .single();
 
       if (trioError && trioError.code !== 'PGRST116') {
@@ -81,11 +83,20 @@ const Home = () => {
       }
 
       if (trio) {
-        // Fetch profiles for trio members
+        // Collect all user IDs, filtering out null values
+        const userIds = [
+          trio.user1_id,
+          trio.user2_id,
+          trio.user3_id,
+          trio.user4_id,
+          trio.user5_id
+        ].filter(Boolean);
+
+        // Fetch profiles for all group members
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('id, user_id, username, bio, avatar_url')
-          .in('user_id', [trio.user1_id, trio.user2_id, trio.user3_id]);
+          .in('user_id', userIds);
 
         if (profilesError) {
           console.error('Error fetching profiles:', profilesError);
@@ -97,10 +108,10 @@ const Home = () => {
         // Fetch posts for this trio
         await fetchTrioPosts(trio.id);
       } else {
-        // No trio for today - this would typically be handled by a daily cron job
+        // No group for today - this would typically be handled by a daily cron job
         toast({
-          title: 'No trio today',
-          description: 'Check back later for your daily trio!'
+          title: 'No group today',
+          description: 'Check back later for your daily group!'
         });
       }
     } catch (error) {
@@ -216,7 +227,7 @@ const Home = () => {
       setHasPostedToday(true);
       toast({
         title: 'Post sent!',
-        description: 'Your post has been shared with your trio'
+        description: 'Your post has been shared with your group'
       });
       
       // Refresh posts
@@ -279,7 +290,7 @@ const Home = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading your trio...</div>
+        <div className="text-lg">Loading your group...</div>
       </div>
     );
   }
@@ -311,19 +322,19 @@ const Home = () => {
       <main className="max-w-2xl mx-auto p-4 space-y-6">
         {currentTrio ? (
           <>
-            {/* Trio Panel */}
+            {/* Group Panel */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Today's Trio
+                  Today's Group ({currentTrio.profiles.length} members)
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Your randomized group for today - share, chat, and connect!
                 </p>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-4 justify-center">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 justify-items-center max-w-lg mx-auto">
                   {currentTrio.profiles.map((profile) => (
                     <div key={profile.id} className="flex flex-col items-center gap-2">
                       <Avatar className="h-16 w-16">
@@ -350,7 +361,7 @@ const Home = () => {
             {/* Post Box */}
             <Card>
               <CardHeader>
-                <CardTitle>Share with your trio</CardTitle>
+                <CardTitle>Share with your group</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Textarea
@@ -370,7 +381,7 @@ const Home = () => {
                 </Button>
                 {hasPostedToday && (
                   <p className="text-sm text-muted-foreground">
-                    You can post once per day. Check back tomorrow for a new trio!
+                    You can post once per day. Check back tomorrow for a new group!
                   </p>
                 )}
               </CardContent>
@@ -461,9 +472,9 @@ const Home = () => {
         ) : (
           <Card>
             <CardContent className="p-8 text-center">
-              <h2 className="text-xl font-semibold mb-2">No trio assigned yet</h2>
+              <h2 className="text-xl font-semibold mb-2">No group assigned yet</h2>
               <p className="text-muted-foreground">
-                New trios are formed daily between 7 AM - 11 PM.<br />
+                New groups are formed daily between 7 AM - 11 PM.<br />
                 Check back throughout the day!
               </p>
             </CardContent>
