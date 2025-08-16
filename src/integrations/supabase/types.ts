@@ -217,6 +217,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      get_random_cron_time: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_user_age_range: {
         Args: { profile_user_id: string }
         Returns: string
