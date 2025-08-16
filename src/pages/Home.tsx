@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import NotificationBell from '@/components/NotificationBell';
+import MediaUpload from '@/components/MediaUpload';
 
 interface Profile {
   id: string;
@@ -35,6 +36,7 @@ interface Post {
   id: string;
   content: string | null;
   media_url: string | null;
+  media_type: string | null;
   created_at: string;
   user_id: string;
   profiles: Profile;
@@ -61,6 +63,8 @@ const Home = () => {
   const [newReply, setNewReply] = useState('');
   const [hasPostedToday, setHasPostedToday] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [mediaUrl, setMediaUrl] = useState<string>('');
+  const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -206,7 +210,7 @@ const Home = () => {
   };
 
   const handlePostSubmit = async () => {
-    if (!newPost.trim() || !currentTrio || hasPostedToday) return;
+    if ((!newPost.trim() && !mediaUrl) || !currentTrio || hasPostedToday) return;
 
     try {
       const { error } = await supabase
@@ -214,7 +218,9 @@ const Home = () => {
         .insert({
           user_id: user?.id,
           trio_id: currentTrio.id,
-          content: newPost.trim()
+          content: newPost.trim() || null,
+          media_url: mediaUrl || null,
+          media_type: mediaType || null
         });
 
       if (error) {
@@ -227,6 +233,8 @@ const Home = () => {
       }
 
       setNewPost('');
+      setMediaUrl('');
+      setMediaType(null);
       setHasPostedToday(true);
       toast({
         title: 'Post sent!',
@@ -243,6 +251,11 @@ const Home = () => {
         variant: 'destructive'
       });
     }
+  };
+
+  const handleMediaUploaded = (url: string, type: 'image' | 'video') => {
+    setMediaUrl(url);
+    setMediaType(type);
   };
 
   const handleReplySubmit = async (postId: string) => {
@@ -300,69 +313,60 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card p-4">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">Random Groups</h1>
+      <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-bold">artrio</h1>
             {isSubscribed && (
-              <Badge variant="outline" className="text-xs">
-                🔔 Live
+              <Badge variant="outline" className="text-xs px-1 py-0">
+                Live
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <NotificationBell />
             {isAdmin && (
-              <Button variant="outline" size="sm" onClick={() => navigate('/admin')}>
-                <Shield className="h-4 w-4 mr-2" />
-                Admin
+              <Button variant="ghost" size="sm" onClick={() => navigate('/admin')} className="h-8 px-2">
+                <Shield className="h-4 w-4" />
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => navigate('/profile')}>
-              <Settings className="h-4 w-4 mr-2" />
-              Profile
+            <Button variant="ghost" size="sm" onClick={() => navigate('/profile')} className="h-8 px-2">
+              <Settings className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" onClick={signOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
+            <Button variant="ghost" size="sm" onClick={signOut} className="h-8 px-2">
+              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto p-4 space-y-6">
+      <main className="p-4 space-y-4 pb-20">
         {currentTrio ? (
           <>
             {/* Group Panel */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
                   <Users className="h-5 w-5" />
-                  Today's Group ({currentTrio.profiles.length} members)
+                  Today's Group ({currentTrio.profiles.length})
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Your randomized group for today - share, chat, and connect!
-                </p>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 justify-items-center max-w-lg mx-auto">
+                <div className="flex gap-3 overflow-x-auto pb-2">
                   {currentTrio.profiles.map((profile) => (
-                    <div key={profile.id} className="flex flex-col items-center gap-2">
-                      <Avatar className="h-16 w-16">
+                    <div key={profile.id} className="flex flex-col items-center gap-2 min-w-0 flex-shrink-0">
+                      <Avatar className="h-12 w-12">
                         <AvatarImage src={profile.avatar_url || undefined} />
                         <AvatarFallback>
                           {profile.username.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="text-center">
-                        <p className="font-medium text-sm">{profile.username}</p>
-                        {profile.bio && (
-                          <p className="text-xs text-muted-foreground">{profile.bio}</p>
+                      <div className="text-center min-w-0">
+                        <p className="font-medium text-sm truncate w-16">{profile.username}</p>
+                        {profile.user_id === user?.id && (
+                          <Badge variant="secondary" className="text-xs mt-1">You</Badge>
                         )}
                       </div>
-                      {profile.user_id === user?.id && (
-                        <Badge variant="secondary" className="text-xs">You</Badge>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -371,82 +375,118 @@ const Home = () => {
 
             {/* Post Box */}
             <Card>
-              <CardHeader>
-                <CardTitle>Share with your group</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Share with your group</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3">
                 <Textarea
-                  placeholder="What's on your mind today?"
+                  placeholder="What's happening?"
                   value={newPost}
                   onChange={(e) => setNewPost(e.target.value)}
                   disabled={hasPostedToday}
-                  className="min-h-[100px]"
+                  className="min-h-[80px] resize-none"
                 />
+                
+                {!hasPostedToday && (
+                  <MediaUpload 
+                    onMediaUploaded={handleMediaUploaded}
+                    className="w-full"
+                  />
+                )}
+                
                 <Button 
                   onClick={handlePostSubmit}
-                  disabled={!newPost.trim() || hasPostedToday}
+                  disabled={(!newPost.trim() && !mediaUrl) || hasPostedToday}
                   className="w-full"
+                  size="lg"
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  {hasPostedToday ? 'Already posted today' : 'Send Post'}
+                  {hasPostedToday ? 'Posted for today' : 'Share'}
                 </Button>
+                
                 {hasPostedToday && (
-                  <p className="text-sm text-muted-foreground">
-                    You can post once per day. Check back tomorrow for a new group!
+                  <p className="text-sm text-muted-foreground text-center">
+                    One post per day. New group tomorrow!
                   </p>
                 )}
               </CardContent>
             </Card>
 
             {/* Posts and Replies */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {posts.map((post) => {
                 const postReplies = replies.filter(reply => reply.post_id === post.id);
                 const userHasReplied = postReplies.some(reply => reply.user_id === user?.id);
                 
                 return (
                   <Card key={post.id}>
-                    <CardContent className="p-4 space-y-4">
+                    <CardContent className="p-4 space-y-3">
                       <div className="flex items-start gap-3">
-                        <Avatar className="h-8 w-8">
+                        <Avatar className="h-8 w-8 flex-shrink-0">
                           <AvatarImage src={post.profiles.avatar_url || undefined} />
-                          <AvatarFallback>
+                          <AvatarFallback className="text-xs">
                             {post.profiles.username.substring(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-sm">{post.profiles.username}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(post.created_at).toLocaleTimeString()}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="font-medium text-sm truncate">{post.profiles.username}</p>
+                            <p className="text-xs text-muted-foreground flex-shrink-0">
+                              {new Date(post.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>
-                          <p className="mt-1">{post.content}</p>
+                          {post.content && <p className="text-sm leading-relaxed break-words">{post.content}</p>}
+                          
+                          {/* Media Display */}
+                          {post.media_url && (
+                            <div className="mt-3">
+                              {post.media_type === 'image' ? (
+                                <img 
+                                  src={post.media_url} 
+                                  alt="Post media" 
+                                  className="max-w-full h-auto rounded-lg border"
+                                  style={{ maxHeight: '300px' }}
+                                />
+                              ) : post.media_type === 'video' ? (
+                                <video 
+                                  src={post.media_url} 
+                                  controls 
+                                  className="max-w-full h-auto rounded-lg border"
+                                  style={{ maxHeight: '300px' }}
+                                />
+                              ) : null}
+                            </div>
+                          )}
                         </div>
                       </div>
 
                       {/* Replies */}
                       {postReplies.length > 0 && (
-                        <div className="ml-11 space-y-2 border-l-2 border-muted pl-4">
-                          {postReplies.slice(0, 2).map((reply) => (
+                        <div className="ml-11 space-y-2 border-l-2 border-muted pl-3">
+                          {postReplies.slice(0, 3).map((reply) => (
                             <div key={reply.id} className="flex items-start gap-2">
-                              <Avatar className="h-6 w-6">
+                              <Avatar className="h-6 w-6 flex-shrink-0">
                                 <AvatarImage src={reply.profiles.avatar_url || undefined} />
-                                <AvatarFallback>
+                                <AvatarFallback className="text-xs">
                                   {reply.profiles.username.substring(0, 1).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
-                              <div>
+                              <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <p className="font-medium text-xs">{reply.profiles.username}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {new Date(reply.created_at).toLocaleTimeString()}
+                                  <p className="font-medium text-xs truncate">{reply.profiles.username}</p>
+                                  <p className="text-xs text-muted-foreground flex-shrink-0">
+                                    {new Date(reply.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                   </p>
                                 </div>
-                                <p className="text-sm">{reply.content}</p>
+                                <p className="text-sm break-words">{reply.content}</p>
                               </div>
                             </div>
                           ))}
+                          {postReplies.length > 3 && (
+                            <p className="text-xs text-muted-foreground">
+                              +{postReplies.length - 3} more replies
+                            </p>
+                          )}
                         </div>
                       )}
 
@@ -454,15 +494,16 @@ const Home = () => {
                       {post.user_id !== user?.id && !userHasReplied && (
                         <div className="ml-11 space-y-2">
                           <Textarea
-                            placeholder="Reply to this post..."
+                            placeholder="Reply..."
                             value={newReply}
                             onChange={(e) => setNewReply(e.target.value)}
-                            className="min-h-[60px] text-sm"
+                            className="min-h-[60px] text-sm resize-none"
                           />
                           <Button
                             size="sm"
                             onClick={() => handleReplySubmit(post.id)}
                             disabled={!newReply.trim()}
+                            className="h-8"
                           >
                             Reply
                           </Button>
@@ -471,7 +512,7 @@ const Home = () => {
 
                       {userHasReplied && (
                         <p className="ml-11 text-xs text-muted-foreground">
-                          You've already replied to this post
+                          ✓ Replied
                         </p>
                       )}
                     </CardContent>
@@ -482,11 +523,11 @@ const Home = () => {
           </>
         ) : (
           <Card>
-            <CardContent className="p-8 text-center">
-              <h2 className="text-xl font-semibold mb-2">No group assigned yet</h2>
-              <p className="text-muted-foreground">
-                New groups are formed daily between 7 AM - 11 PM.<br />
-                Check back throughout the day!
+            <CardContent className="p-6 text-center">
+              <h2 className="text-lg font-semibold mb-2">No group yet today</h2>
+              <p className="text-muted-foreground text-sm">
+                Groups form throughout the day.<br />
+                Check back soon!
               </p>
             </CardContent>
           </Card>

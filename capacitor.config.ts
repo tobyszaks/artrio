@@ -24,6 +24,9 @@ const config: CapacitorConfig = {
       layoutName: "launch_screen",
       useDialog: true,
     },
+    Camera: {
+      permissions: ['camera', 'photos']
+    }
   },
 };
 
