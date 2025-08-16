@@ -61,8 +61,8 @@ const Home = () => {
   const [replies, setReplies] = useState<Reply[]>([]);
   const [newPost, setNewPost] = useState('');
   const [newReply, setNewReply] = useState('');
-  const [lastPostTime, setLastPostTime] = useState<Date | null>(null);
-  const [postCooldownRemaining, setPostCooldownRemaining] = useState(0);
+  const [canPost, setCanPost] = useState(true);
+  const [secondsUntilNextPost, setSecondsUntilNextPost] = useState(0);
   const [loading, setLoading] = useState(true);
   const [mediaUrl, setMediaUrl] = useState<string>('');
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
@@ -70,8 +70,24 @@ const Home = () => {
   useEffect(() => {
     if (user) {
       fetchTodaysTrio();
+      checkPostRateLimit();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!canPost && secondsUntilNextPost > 0) {
+      const timer = setInterval(() => {
+        setSecondsUntilNextPost(prev => {
+          if (prev <= 1) {
+            setCanPost(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [canPost, secondsUntilNextPost]);
 
   const fetchTodaysTrio = async () => {
     try {
@@ -169,18 +185,6 @@ const Home = () => {
 
         setPosts(postsWithProfiles);
       }
-      
-      // Check user's last post time for cooldown
-      const userPosts = postsData?.filter(post => post.user_id === user?.id) || [];
-      if (userPosts.length > 0) {
-        // Get the most recent post
-        const mostRecentPost = userPosts.reduce((latest, post) => {
-          return new Date(post.created_at) > new Date(latest.created_at) ? post : latest;
-        });
-        setLastPostTime(new Date(mostRecentPost.created_at));
-      } else {
-        setLastPostTime(null);
-      }
 
       // Fetch replies for all posts
       if (postsData && postsData.length > 0) {
@@ -218,28 +222,28 @@ const Home = () => {
     }
   };
 
-  // Calculate cooldown timer
-  useEffect(() => {
-    if (!lastPostTime) {
-      setPostCooldownRemaining(0);
-      return;
+  const checkPostRateLimit = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase.rpc('seconds_until_next_post', {
+        user_id_param: user.id
+      });
+      
+      if (error) {
+        console.error('Error checking rate limit:', error);
+        return;
+      }
+      
+      setSecondsUntilNextPost(data || 0);
+      setCanPost((data || 0) === 0);
+    } catch (error) {
+      console.error('Error checking rate limit:', error);
     }
-
-    const calculateCooldown = () => {
-      const now = new Date();
-      const timeSinceLastPost = now.getTime() - lastPostTime.getTime();
-      const cooldownMs = 10 * 60 * 1000; // 10 minutes in milliseconds
-      const remaining = Math.max(0, cooldownMs - timeSinceLastPost);
-      setPostCooldownRemaining(Math.ceil(remaining / 1000)); // Convert to seconds
-    };
-
-    calculateCooldown();
-    const interval = setInterval(calculateCooldown, 1000);
-    return () => clearInterval(interval);
-  }, [lastPostTime]);
+  };
 
   const handlePostSubmit = async () => {
-    if ((!newPost.trim() && !mediaUrl) || !currentTrio || postCooldownRemaining > 0) return;
+    if ((!newPost.trim() && !mediaUrl) || !currentTrio || !canPost) return;
 
     try {
       const { error } = await supabase
@@ -255,7 +259,9 @@ const Home = () => {
       if (error) {
         toast({
           title: 'Error',
-          description: error.message,
+          description: error.message === 'new row violates row-level security policy for table "posts"' 
+            ? 'Please wait 10 minutes between posts to prevent spam.'
+            : error.message,
           variant: 'destructive'
         });
         return;
@@ -264,14 +270,14 @@ const Home = () => {
       setNewPost('');
       setMediaUrl('');
       setMediaType(null);
-      setLastPostTime(new Date());
       toast({
         title: 'Post sent!',
         description: 'Your post has been shared with your trio'
       });
       
-      // Refresh posts
+      // Refresh posts and rate limit
       await fetchTrioPosts(currentTrio.id);
+      await checkPostRateLimit();
     } catch (error) {
       console.error('Error posting:', error);
       toast({
@@ -345,7 +351,7 @@ const Home = () => {
       <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-bold">artrio</h1>
+            <h1 className="text-lg font-bold">Artrio</h1>
             {isSubscribed && (
               <Badge variant="outline" className="text-xs px-1 py-0">
                 Live
@@ -416,11 +422,11 @@ const Home = () => {
                   placeholder="What's happening?"
                   value={newPost}
                   onChange={(e) => setNewPost(e.target.value)}
-                  disabled={postCooldownRemaining > 0}
+                  disabled={!canPost}
                   className="min-h-[80px] resize-none"
                 />
                 
-                {postCooldownRemaining === 0 && (
+                {canPost && (
                   <MediaUpload 
                     onMediaUploaded={handleMediaUploaded}
                     className="w-full"
@@ -429,17 +435,17 @@ const Home = () => {
                 
                 <Button 
                   onClick={handlePostSubmit}
-                  disabled={(!newPost.trim() && !mediaUrl) || postCooldownRemaining > 0}
+                  disabled={(!newPost.trim() && !mediaUrl) || !canPost}
                   className="w-full"
                   size="lg"
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  {postCooldownRemaining > 0 ? `Wait ${Math.floor(postCooldownRemaining / 60)}:${(postCooldownRemaining % 60).toString().padStart(2, '0')}` : 'Share'}
+                  {!canPost ? `Wait ${Math.floor(secondsUntilNextPost / 60)}:${(secondsUntilNextPost % 60).toString().padStart(2, '0')}` : 'Share'}
                 </Button>
                 
-                {postCooldownRemaining > 0 && (
+                {!canPost && (
                   <p className="text-sm text-muted-foreground text-center">
-                    You can post again in {Math.floor(postCooldownRemaining / 60)} minutes {postCooldownRemaining % 60} seconds
+                    Wait {Math.floor(secondsUntilNextPost / 60)} minutes and {secondsUntilNextPost % 60} seconds to post again (spam prevention)
                   </p>
                 )}
               </CardContent>

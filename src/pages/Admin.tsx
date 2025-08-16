@@ -117,14 +117,14 @@ const Admin = () => {
       // Get recent users (last 10)
       const { data: recentProfiles } = await supabase
         .from('profiles')
-        .select('username, created_at, birthday')
+        .select('username, created_at')
         .order('created_at', { ascending: false })
         .limit(10);
 
       const recentUsers = recentProfiles?.map(profile => ({
         username: profile.username,
         created_at: profile.created_at,
-        ageRange: getAgeRange(profile.birthday)
+        ageRange: 'Hidden' // Age information is now protected
       })) || [];
 
       setStats({

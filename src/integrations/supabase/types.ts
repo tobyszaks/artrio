@@ -185,7 +185,6 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
-          birthday: string
           created_at: string
           id: string
           updated_at: string
@@ -195,7 +194,6 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
-          birthday: string
           created_at?: string
           id?: string
           updated_at?: string
@@ -205,7 +203,6 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
-          birthday?: string
           created_at?: string
           id?: string
           updated_at?: string
@@ -324,6 +321,30 @@ export type Database = {
         }
         Relationships: []
       }
+      sensitive_user_data: {
+        Row: {
+          birthday: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          birthday: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          birthday?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trios: {
         Row: {
           created_at: string
@@ -357,6 +378,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -386,6 +428,14 @@ export type Database = {
       calculate_age: {
         Args: { birth_date: string }
         Returns: number
+      }
+      calculate_age_secure: {
+        Args: { target_user_id: string }
+        Returns: number
+      }
+      can_user_post: {
+        Args: { user_id_param: string }
+        Returns: boolean
       }
       cleanup_expired_content: {
         Args: Record<PropertyKey, never>
@@ -434,6 +484,10 @@ export type Database = {
       populate_safe_profiles: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      seconds_until_next_post: {
+        Args: { user_id_param: string }
+        Returns: number
       }
     }
     Enums: {

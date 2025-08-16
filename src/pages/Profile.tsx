@@ -17,9 +17,12 @@ interface Profile {
   username: string;
   bio: string | null;
   avatar_url: string | null;
-  birthday: string;
   created_at: string;
   updated_at: string;
+}
+
+interface SensitiveData {
+  birthday: string;
 }
 
 const Profile = () => {
@@ -27,6 +30,8 @@ const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [sensitiveData, setSensitiveData] = useState<SensitiveData | null>(null);
+  const [userAge, setUserAge] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -45,14 +50,15 @@ const Profile = () => {
 
   const fetchProfile = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch profile data
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user?.id)
         .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching profile:', error);
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
         toast({
           title: 'Error',
           description: 'Failed to load profile',
@@ -61,12 +67,31 @@ const Profile = () => {
         return;
       }
 
-      if (data) {
-        setProfile(data);
+      // Fetch sensitive data (birthday) - only accessible by the user themselves
+      const { data: sensitiveData, error: sensitiveError } = await supabase
+        .from('sensitive_user_data')
+        .select('birthday')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (sensitiveError && sensitiveError.code !== 'PGRST116') {
+        console.error('Error fetching sensitive data:', sensitiveError);
+      }
+
+      // Calculate age using secure function
+      const { data: ageData, error: ageError } = await supabase
+        .rpc('calculate_age_secure', { target_user_id: user?.id });
+
+      if (ageError) {
+        console.error('Error calculating age:', ageError);
+      }
+
+      if (profileData) {
+        setProfile(profileData);
         setFormData({
-          username: data.username,
-          bio: data.bio || '',
-          avatar_url: data.avatar_url || ''
+          username: profileData.username,
+          bio: profileData.bio || '',
+          avatar_url: profileData.avatar_url || ''
         });
       } else {
         // No profile exists - this might happen if signup didn't create one
@@ -76,6 +101,14 @@ const Profile = () => {
           bio: '',
           avatar_url: ''
         });
+      }
+
+      if (sensitiveData) {
+        setSensitiveData(sensitiveData);
+      }
+
+      if (ageData) {
+        setUserAge(ageData);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -207,8 +240,7 @@ const Profile = () => {
             user_id: user?.id,
             username: formData.username.trim(),
             bio: formData.bio.trim() || null,
-            avatar_url: formData.avatar_url.trim() || null,
-            birthday: '1990-01-01' // Default birthday - should be updated by user
+            avatar_url: formData.avatar_url.trim() || null
           });
 
         if (error) {
@@ -346,7 +378,7 @@ const Profile = () => {
                 className="min-h-[100px]"
               />
               <p className="text-xs text-muted-foreground">
-                {profile && profile.birthday && isUnderAge(profile.birthday)
+                {userAge !== null && userAge < 18
                   ? 'Bio will be hidden for users under 18' 
                   : 'Share a bit about yourself with your trio members'
                 }
@@ -362,10 +394,10 @@ const Profile = () => {
                     <p className="text-muted-foreground">Email</p>
                     <p>{user?.email}</p>
                   </div>
-                  {profile.birthday && (
+                  {userAge !== null && (
                     <div>
                       <p className="text-muted-foreground">Age</p>
-                      <p>{calculateAge(profile.birthday)} years old</p>
+                      <p>{userAge} years old</p>
                     </div>
                   )}
                   <div>
