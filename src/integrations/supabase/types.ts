@@ -185,6 +185,8 @@ export type Database = {
           user1_id: string
           user2_id: string
           user3_id: string
+          user4_id: string | null
+          user5_id: string | null
         }
         Insert: {
           created_at?: string
@@ -193,6 +195,8 @@ export type Database = {
           user1_id: string
           user2_id: string
           user3_id: string
+          user4_id?: string | null
+          user5_id?: string | null
         }
         Update: {
           created_at?: string
@@ -201,6 +205,8 @@ export type Database = {
           user1_id?: string
           user2_id?: string
           user3_id?: string
+          user4_id?: string | null
+          user5_id?: string | null
         }
         Relationships: []
       }

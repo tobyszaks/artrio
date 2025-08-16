@@ -108,23 +108,48 @@ Deno.serve(async (req) => {
     // Shuffle the eligible profiles randomly
     const shuffled = [...eligibleProfiles].sort(() => Math.random() - 0.5)
     
-    // Group into trios
-    const trios = []
-    for (let i = 0; i < shuffled.length - 2; i += 3) {
-      if (i + 2 < shuffled.length) {
-        trios.push({
-          user1_id: shuffled[i].user_id,
-          user2_id: shuffled[i + 1].user_id,
-          user3_id: shuffled[i + 2].user_id,
-          date: today
-        })
+    // Group into trios with dynamic sizing for remainders
+    const groups = []
+    const totalUsers = shuffled.length
+    
+    // Calculate how many complete groups of 3 we can make
+    const completeGroups = Math.floor(totalUsers / 3)
+    const remainingUsers = totalUsers % 3
+    
+    let userIndex = 0
+    
+    // Create complete groups of 3
+    for (let i = 0; i < completeGroups; i++) {
+      groups.push({
+        user1_id: shuffled[userIndex].user_id,
+        user2_id: shuffled[userIndex + 1].user_id,
+        user3_id: shuffled[userIndex + 2].user_id,
+        user4_id: null,
+        user5_id: null,
+        date: today
+      })
+      userIndex += 3
+    }
+    
+    // Handle remaining users
+    if (remainingUsers > 0) {
+      if (remainingUsers === 1 && groups.length > 0) {
+        // Add the remaining user to the last group (making it a group of 4)
+        groups[groups.length - 1].user4_id = shuffled[userIndex].user_id
+      } else if (remainingUsers === 2 && groups.length > 0) {
+        // Add the remaining 2 users to the last group (making it a group of 5)
+        groups[groups.length - 1].user4_id = shuffled[userIndex].user_id
+        groups[groups.length - 1].user5_id = shuffled[userIndex + 1].user_id
+      } else if (remainingUsers === 2 && groups.length === 0) {
+        // If we only have 2 users total, they don't get a group (need at least 3)
+        console.log('Only 2 users available - insufficient for group formation')
       }
     }
 
-    if (trios.length === 0) {
-      console.log('No complete trios could be formed')
+    if (groups.length === 0) {
+      console.log('No complete groups could be formed')
       return new Response(
-        JSON.stringify({ message: 'No complete trios could be formed' }),
+        JSON.stringify({ message: 'No complete groups could be formed' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200 
@@ -132,19 +157,19 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log(`Creating ${trios.length} trios`)
+    console.log(`Creating ${groups.length} groups`)
 
-    // Insert the new trios
+    // Insert the new groups
     const { error: insertError } = await supabaseClient
       .from('trios')
-      .insert(trios)
+      .insert(groups)
 
     if (insertError) {
-      console.error('Error inserting trios:', insertError)
+      console.error('Error inserting groups:', insertError)
       throw insertError
     }
 
-    console.log(`Successfully created ${trios.length} trios for ${today}`)
+    console.log(`Successfully created ${groups.length} groups for ${today}`)
 
     // Clean up expired posts and replies
     const { error: cleanupError } = await supabaseClient.rpc('cleanup_expired_content')
@@ -158,8 +183,8 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        message: 'Trio randomization completed successfully',
-        trios_created: trios.length,
+        message: 'Group randomization completed successfully',
+        groups_created: groups.length,
         date: today
       }),
       { 
