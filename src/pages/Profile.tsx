@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, Save, User } from 'lucide-react';
+import { ArrowLeft, Save, User, Camera, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -29,6 +29,7 @@ const Profile = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     bio: '',
@@ -76,6 +77,77 @@ const Profile = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Error',
+        description: 'Please select an image file',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'Error',
+        description: 'Image must be smaller than 5MB',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // Create unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        toast({
+          title: 'Upload failed',
+          description: uploadError.message,
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      if (data.publicUrl) {
+        setFormData(prev => ({ ...prev, avatar_url: data.publicUrl }));
+        toast({
+          title: 'Image uploaded!',
+          description: 'Don\'t forget to save your profile to update your avatar'
+        });
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: 'Upload failed',
+        description: 'Failed to upload image',
+        variant: 'destructive'
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -169,26 +241,43 @@ const Profile = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Profile Avatar */}
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20">
+            <div className="flex flex-col items-center gap-4">
+              <Avatar className="h-24 w-24">
                 <AvatarImage src={formData.avatar_url || undefined} />
-                <AvatarFallback className="text-lg">
+                <AvatarFallback className="text-xl">
                   {formData.username.substring(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <Label htmlFor="avatar_url">Avatar URL</Label>
-                <Input
-                  id="avatar_url"
-                  type="url"
-                  placeholder="https://example.com/avatar.jpg"
-                  value={formData.avatar_url}
-                  onChange={(e) => setFormData(prev => ({ ...prev, avatar_url: e.target.value }))}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Enter a URL to an image for your profile picture
-                </p>
+              
+              <div className="flex gap-2">
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    id="avatar-upload"
+                    disabled={uploading}
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={uploading}
+                    className="relative"
+                  >
+                    {uploading ? (
+                      <Upload className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4 mr-2" />
+                    )}
+                    {uploading ? 'Uploading...' : 'Change Photo'}
+                  </Button>
+                </div>
               </div>
+              
+              <p className="text-xs text-muted-foreground text-center max-w-sm">
+                Select a photo from your device. Maximum size: 5MB
+              </p>
             </div>
 
             {/* Username */}
@@ -248,7 +337,7 @@ const Profile = () => {
             {/* Save Button */}
             <Button 
               onClick={handleSave}
-              disabled={saving || !formData.username.trim()}
+              disabled={saving || uploading || !formData.username.trim()}
               className="w-full"
             >
               <Save className="h-4 w-4 mr-2" />
