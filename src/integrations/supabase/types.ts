@@ -176,7 +176,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      safe_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          id: string | null
+          updated_at: string | null
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: never
+          created_at?: string | null
+          id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: never
+          created_at?: string | null
+          id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       calculate_age: {
@@ -186,6 +215,10 @@ export type Database = {
       cleanup_expired_content: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      get_user_age_range: {
+        Args: { profile_user_id: string }
+        Returns: string
       }
     }
     Enums: {
