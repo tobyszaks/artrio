@@ -103,6 +103,41 @@ export default function SystemControlsPanel() {
     }
   };
 
+  const deleteTodaysTrios = async () => {
+    setButtonLoading('deleteTrios', true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { error } = await supabase
+        .from('trios')
+        .delete()
+        .eq('date', today);
+      
+      if (error) throw error;
+
+      const currentUser = await supabase.auth.getUser();
+      await supabase.rpc('log_admin_action', {
+        p_admin_id: currentUser.data.user?.id,
+        p_action_type: 'system_control',
+        p_description: `Deleted all trios for ${today}`
+      });
+
+      toast({
+        title: "Success",
+        description: "Today's trios deleted successfully"
+      });
+    } catch (error) {
+      console.error('Error deleting trios:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete today's trios"
+      });
+    } finally {
+      setButtonLoading('deleteTrios', false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -151,12 +186,18 @@ export default function SystemControlsPanel() {
             </div>
           </Button>
 
-          <div className="h-20 flex items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg">
-            <div className="text-center text-muted-foreground">
-              <div className="font-medium">More controls</div>
-              <div className="text-xs">Coming soon</div>
+          <Button
+            onClick={deleteTodaysTrios}
+            disabled={loading.deleteTrios}
+            variant="destructive"
+            className="h-20 flex flex-col gap-2"
+          >
+            <Trash2 className="h-6 w-6" />
+            <div className="text-center">
+              <div className="font-medium">Delete Today's Groups</div>
+              <div className="text-xs opacity-80">Remove current daily groups</div>
             </div>
-          </div>
+          </Button>
         </div>
 
         <div className="mt-6 p-4 bg-muted rounded-lg">
