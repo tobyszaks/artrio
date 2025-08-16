@@ -8,4 +8,4 @@ cmds = ["npm ci --legacy-peer-deps"]
 cmds = ["npm run build"]
 
 [start]
-cmd = "npx serve dist -s -l $PORT"
+cmd = "npx serve@latest dist -s -l ${PORT:-3000}"
