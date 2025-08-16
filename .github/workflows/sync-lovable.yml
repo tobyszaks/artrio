@@ -1,0 +1,29 @@
+name: Sync from Lovable Repo
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          
+      - name: Add upstream
+        run: |
+          git remote add lovable https://github.com/tobyszaks/rantrio.git || true
+          
+      - name: Fetch and merge
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git fetch lovable main
+          git merge lovable/main --no-edit || echo "No changes to merge"
+          
+      - name: Push changes
+        run: |
+          git push origin main || echo "Nothing to push"

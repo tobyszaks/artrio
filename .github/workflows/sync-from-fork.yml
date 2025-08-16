@@ -1,0 +1,18 @@
+name: Sync from Fork
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login == 'tobyszaks'
+    steps:
+      - uses: actions/checkout@v3
+      - name: Auto-merge PRs from tobyszaks
+        uses: pascalgn/merge-action@v0.15.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          merge_method: merge
