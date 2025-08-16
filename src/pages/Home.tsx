@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Send, Users, Settings } from 'lucide-react';
+import { LogOut, Send, Users, Settings, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -46,7 +46,7 @@ interface Reply {
 }
 
 const Home = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [currentTrio, setCurrentTrio] = useState<Trio | null>(null);
@@ -290,6 +290,12 @@ const Home = () => {
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <h1 className="text-2xl font-bold">Random Trios</h1>
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin')}>
+                <Shield className="h-4 w-4 mr-2" />
+                Admin
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => navigate('/profile')}>
               <Settings className="h-4 w-4 mr-2" />
               Profile
