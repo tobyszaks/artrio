@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'app.lovable.5616f9cd575b4981842e64a5c8e9b8c9',
-  appName: 'triode',
+  appName: 'artrio',
   webDir: 'dist',
   server: {
     url: 'https://5616f9cd-575b-4981-842e-64a5c8e9b8c9.lovableproject.com?forceHideBadge=true',
