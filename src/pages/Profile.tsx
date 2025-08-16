@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +30,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     username: '',
     bio: '',
@@ -86,6 +87,10 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCameraClick = () => {
+    fileInputRef.current?.click();
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,6 +161,10 @@ const Profile = () => {
       });
     } finally {
       setUploading(false);
+      // Clear the input so the same file can be selected again
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   };
 
@@ -282,35 +291,33 @@ const Profile = () => {
               <Avatar className="h-24 w-24">
                 <AvatarImage src={formData.avatar_url || undefined} />
                 <AvatarFallback className="text-xl">
-                  {formData.username.substring(0, 2).toUpperCase()}
+                  {formData.username.substring(0, 2).toUpperCase() || 'US'}
                 </AvatarFallback>
               </Avatar>
               
-              <div className="flex gap-2">
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    id="avatar-upload"
-                    disabled={uploading}
-                  />
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    disabled={uploading}
-                    className="relative"
-                  >
-                    {uploading ? (
-                      <Upload className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Camera className="h-4 w-4 mr-2" />
-                    )}
-                    {uploading ? 'Uploading...' : 'Change Photo'}
-                  </Button>
-                </div>
-              </div>
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                style={{ display: 'none' }}
+                disabled={uploading}
+              />
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={uploading}
+                onClick={handleCameraClick}
+              >
+                {uploading ? (
+                  <Upload className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4 mr-2" />
+                )}
+                {uploading ? 'Uploading...' : 'Change Photo'}
+              </Button>
               
               <p className="text-xs text-muted-foreground text-center max-w-sm">
                 Select a photo from your device. Maximum size: 5MB
