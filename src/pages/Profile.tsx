@@ -48,7 +48,7 @@ const Profile = () => {
         .from('profiles')
         .select('*')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
@@ -66,6 +66,14 @@ const Profile = () => {
           username: data.username,
           bio: data.bio || '',
           avatar_url: data.avatar_url || ''
+        });
+      } else {
+        // No profile exists - this might happen if signup didn't create one
+        console.log('No profile found, user will need to create one');
+        setFormData({
+          username: '',
+          bio: '',
+          avatar_url: ''
         });
       }
     } catch (error) {
@@ -163,27 +171,50 @@ const Profile = () => {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          username: formData.username.trim(),
-          bio: formData.bio.trim() || null,
-          avatar_url: formData.avatar_url.trim() || null
-        })
-        .eq('user_id', user?.id);
+      if (profile) {
+        // Update existing profile
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            username: formData.username.trim(),
+            bio: formData.bio.trim() || null,
+            avatar_url: formData.avatar_url.trim() || null
+          })
+          .eq('user_id', user?.id);
 
-      if (error) {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive'
-        });
-        return;
+        if (error) {
+          toast({
+            title: 'Error',
+            description: error.message,
+            variant: 'destructive'
+          });
+          return;
+        }
+      } else {
+        // Create new profile (this shouldn't normally happen but handles edge cases)
+        const { error } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: user?.id,
+            username: formData.username.trim(),
+            bio: formData.bio.trim() || null,
+            avatar_url: formData.avatar_url.trim() || null,
+            birthday: '1990-01-01' // Default birthday - should be updated by user
+          });
+
+        if (error) {
+          toast({
+            title: 'Error',
+            description: error.message,
+            variant: 'destructive'
+          });
+          return;
+        }
       }
 
       toast({
-        title: 'Profile updated!',
-        description: 'Your profile has been saved successfully'
+        title: profile ? 'Profile updated!' : 'Profile created!',
+        description: profile ? 'Your profile has been saved successfully' : 'Your profile has been created successfully'
       });
 
       // Refresh profile data
@@ -200,7 +231,8 @@ const Profile = () => {
     }
   };
 
-  const calculateAge = (birthday: string) => {
+  const calculateAge = (birthday: string | null): number | 'Unknown' => {
+    if (!birthday) return 'Unknown';
     const birthDate = new Date(birthday);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -209,6 +241,11 @@ const Profile = () => {
       age--;
     }
     return age;
+  };
+
+  const isUnderAge = (birthday: string | null): boolean => {
+    const age = calculateAge(birthday);
+    return typeof age === 'number' && age < 18;
   };
 
   if (loading) {
@@ -236,7 +273,7 @@ const Profile = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              Edit Profile
+              {profile ? 'Edit Profile' : 'Create Your Profile'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -302,7 +339,7 @@ const Profile = () => {
                 className="min-h-[100px]"
               />
               <p className="text-xs text-muted-foreground">
-                {profile && calculateAge(profile.birthday) < 18 
+                {profile && profile.birthday && isUnderAge(profile.birthday)
                   ? 'Bio will be hidden for users under 18' 
                   : 'Share a bit about yourself with your trio members'
                 }
@@ -318,10 +355,12 @@ const Profile = () => {
                     <p className="text-muted-foreground">Email</p>
                     <p>{user?.email}</p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Age</p>
-                    <p>{calculateAge(profile.birthday)} years old</p>
-                  </div>
+                  {profile.birthday && (
+                    <div>
+                      <p className="text-muted-foreground">Age</p>
+                      <p>{calculateAge(profile.birthday)} years old</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-muted-foreground">Member since</p>
                     <p>{new Date(profile.created_at).toLocaleDateString()}</p>
@@ -341,7 +380,7 @@ const Profile = () => {
               className="w-full"
             >
               <Save className="h-4 w-4 mr-2" />
-              {saving ? 'Saving...' : 'Save Profile'}
+              {saving ? 'Saving...' : (profile ? 'Save Profile' : 'Create Profile')}
             </Button>
           </CardContent>
         </Card>
