@@ -1,0 +1,75 @@
+name: Auto-Sync from Lovable → Railway Pipeline
+
+on:
+  schedule:
+    # Check every 2 minutes for updates
+    - cron: '*/2 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Tyler's repo
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      
+      - name: Configure Git
+        run: |
+          git config user.name "Sync Bot"
+          git config user.email "actions@github.com"
+      
+      - name: Add Toby's repo as remote
+        run: |
+          git remote add lovable https://github.com/tobyszaks/rantrio.git || true
+          git fetch lovable main --no-tags
+      
+      - name: Check for changes
+        id: check
+        run: |
+          # Get the latest commits from both repos
+          TYLER_COMMIT=$(git rev-parse HEAD)
+          TOBY_COMMIT=$(git rev-parse lovable/main)
+          
+          if [ "$TYLER_COMMIT" != "$TOBY_COMMIT" ]; then
+            echo "Changes detected"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "No changes"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Merge changes from Lovable
+        if: steps.check.outputs.has_changes == 'true'
+        run: |
+          # Try to merge Toby's changes
+          git merge lovable/main -m "🔄 Auto-sync from Lovable (tobyszaks/rantrio)" --no-edit || {
+            # If merge fails, try rebase
+            echo "Merge failed, attempting rebase..."
+            git rebase --abort 2>/dev/null || true
+            git merge --abort 2>/dev/null || true
+            git reset --hard HEAD
+            
+            # Take Toby's version for conflicts (Lovable is source of truth)
+            git merge lovable/main -X theirs -m "🔄 Auto-sync from Lovable (conflicts resolved using Lovable version)"
+          }
+      
+      - name: Push changes
+        if: steps.check.outputs.has_changes == 'true'
+        run: |
+          git push origin main || {
+            echo "Push failed, trying force push to sync..."
+            git push origin main --force-with-lease
+          }
+      
+      - name: Report status
+        if: always()
+        run: |
+          if [ "${{ steps.check.outputs.has_changes }}" == "true" ]; then
+            echo "✅ Successfully synced changes from Lovable"
+          else
+            echo "✅ No new changes from Lovable"
+          fi
