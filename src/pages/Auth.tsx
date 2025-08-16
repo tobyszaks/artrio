@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, AlertCircle } from 'lucide-react';
+import { CalendarIcon, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -24,6 +24,7 @@ const Auth = () => {
   const [bio, setBio] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ageError, setAgeError] = useState('');
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear() - 20); // Start 20 years back
 
   // Redirect if already authenticated
   if (user) {
@@ -208,11 +209,55 @@ const Auth = () => {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
+                      <div className="flex items-center justify-between p-3 border-b">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCalendarYear(calendarYear - 10)}
+                          className="h-7"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          <ChevronLeft className="h-4 w-4 -ml-1" />
+                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCalendarYear(calendarYear - 1)}
+                            className="h-7"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <span className="text-sm font-medium min-w-[60px] text-center">
+                            {calendarYear}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCalendarYear(calendarYear + 1)}
+                            disabled={calendarYear >= new Date().getFullYear()}
+                            className="h-7"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCalendarYear(calendarYear + 10)}
+                          disabled={calendarYear + 10 > new Date().getFullYear()}
+                          className="h-7"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                          <ChevronRight className="h-4 w-4 -ml-1" />
+                        </Button>
+                      </div>
                       <Calendar
                         mode="single"
                         selected={birthday}
                         onSelect={setBirthday}
                         disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                        defaultMonth={new Date(calendarYear, 0)}
                         initialFocus
                         className="p-3 pointer-events-auto"
                       />
