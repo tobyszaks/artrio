@@ -408,6 +408,10 @@ export type Database = {
         Args: { birth_date: string }
         Returns: number
       }
+      can_user_post: {
+        Args: { user_id_param: string }
+        Returns: boolean
+      }
       cleanup_expired_content: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -455,6 +459,10 @@ export type Database = {
       populate_safe_profiles: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      seconds_until_next_post: {
+        Args: { user_id_param: string }
+        Returns: number
       }
     }
     Enums: {

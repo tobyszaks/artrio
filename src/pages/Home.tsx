@@ -61,7 +61,8 @@ const Home = () => {
   const [replies, setReplies] = useState<Reply[]>([]);
   const [newPost, setNewPost] = useState('');
   const [newReply, setNewReply] = useState('');
-  const [hasPostedToday, setHasPostedToday] = useState(false);
+  const [canPost, setCanPost] = useState(true);
+  const [secondsUntilNextPost, setSecondsUntilNextPost] = useState(0);
   const [loading, setLoading] = useState(true);
   const [mediaUrl, setMediaUrl] = useState<string>('');
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
@@ -69,8 +70,24 @@ const Home = () => {
   useEffect(() => {
     if (user) {
       fetchTodaysTrio();
+      checkPostRateLimit();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!canPost && secondsUntilNextPost > 0) {
+      const timer = setInterval(() => {
+        setSecondsUntilNextPost(prev => {
+          if (prev <= 1) {
+            setCanPost(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [canPost, secondsUntilNextPost]);
 
   const fetchTodaysTrio = async () => {
     try {
@@ -168,10 +185,6 @@ const Home = () => {
 
         setPosts(postsWithProfiles);
       }
-      
-      // Check if current user has posted today
-      const userPost = postsData?.find(post => post.user_id === user?.id);
-      setHasPostedToday(!!userPost);
 
       // Fetch replies for all posts
       if (postsData && postsData.length > 0) {
@@ -209,8 +222,28 @@ const Home = () => {
     }
   };
 
+  const checkPostRateLimit = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase.rpc('seconds_until_next_post', {
+        user_id_param: user.id
+      });
+      
+      if (error) {
+        console.error('Error checking rate limit:', error);
+        return;
+      }
+      
+      setSecondsUntilNextPost(data || 0);
+      setCanPost((data || 0) === 0);
+    } catch (error) {
+      console.error('Error checking rate limit:', error);
+    }
+  };
+
   const handlePostSubmit = async () => {
-    if ((!newPost.trim() && !mediaUrl) || !currentTrio || hasPostedToday) return;
+    if ((!newPost.trim() && !mediaUrl) || !currentTrio || !canPost) return;
 
     try {
       const { error } = await supabase
@@ -226,7 +259,9 @@ const Home = () => {
       if (error) {
         toast({
           title: 'Error',
-          description: error.message,
+          description: error.message === 'new row violates row-level security policy for table "posts"' 
+            ? 'Please wait 10 minutes between posts to prevent spam.'
+            : error.message,
           variant: 'destructive'
         });
         return;
@@ -235,14 +270,14 @@ const Home = () => {
       setNewPost('');
       setMediaUrl('');
       setMediaType(null);
-      setHasPostedToday(true);
       toast({
         title: 'Post sent!',
         description: 'Your post has been shared with your group'
       });
       
-      // Refresh posts
+      // Refresh posts and rate limit
       await fetchTrioPosts(currentTrio.id);
+      await checkPostRateLimit();
     } catch (error) {
       console.error('Error posting:', error);
       toast({
@@ -387,11 +422,11 @@ const Home = () => {
                   placeholder="What's happening?"
                   value={newPost}
                   onChange={(e) => setNewPost(e.target.value)}
-                  disabled={hasPostedToday}
+                  disabled={!canPost}
                   className="min-h-[80px] resize-none"
                 />
                 
-                {!hasPostedToday && (
+                {canPost && (
                   <MediaUpload 
                     onMediaUploaded={handleMediaUploaded}
                     className="w-full"
@@ -400,17 +435,17 @@ const Home = () => {
                 
                 <Button 
                   onClick={handlePostSubmit}
-                  disabled={(!newPost.trim() && !mediaUrl) || hasPostedToday}
+                  disabled={(!newPost.trim() && !mediaUrl) || !canPost}
                   className="w-full"
                   size="lg"
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  {hasPostedToday ? 'Posted for today' : 'Share'}
+                  {!canPost ? `Wait ${Math.floor(secondsUntilNextPost / 60)}:${(secondsUntilNextPost % 60).toString().padStart(2, '0')}` : 'Share'}
                 </Button>
                 
-                {hasPostedToday && (
+                {!canPost && (
                   <p className="text-sm text-muted-foreground text-center">
-                    One post per day. New group tomorrow!
+                    Wait {Math.floor(secondsUntilNextPost / 60)} minutes and {secondsUntilNextPost % 60} seconds to post again (spam prevention)
                   </p>
                 )}
               </CardContent>
