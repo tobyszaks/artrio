@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Clock, Send, Users, Settings, Sparkles, RefreshCw } from 'lucide-react';
+import { LogOut, Send, Users, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -56,18 +56,10 @@ const Home = () => {
   const [newReply, setNewReply] = useState('');
   const [hasPostedToday, setHasPostedToday] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showTrioReveal, setShowTrioReveal] = useState(false);
 
   useEffect(() => {
     if (user) {
       fetchTodaysTrio();
-      // Check if we should show trio reveal animation
-      const lastTrioDate = localStorage.getItem('lastTrioDate');
-      const today = new Date().toISOString().split('T')[0];
-      if (lastTrioDate !== today) {
-        setShowTrioReveal(true);
-        localStorage.setItem('lastTrioDate', today);
-      }
     }
   }, [user]);
 
@@ -101,11 +93,6 @@ const Home = () => {
         }
 
         setCurrentTrio({ ...trio, profiles: profiles || [] });
-        
-        // Show trio reveal if it's a new trio and we haven't seen it yet
-        if (showTrioReveal) {
-          setTimeout(() => setShowTrioReveal(false), 3000); // Hide after 3 seconds
-        }
         
         // Fetch posts for this trio
         await fetchTrioPosts(trio.id);
@@ -286,16 +273,7 @@ const Home = () => {
   };
 
   const getTimeUntilNextTrio = () => {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    
-    const diff = tomorrow.getTime() - now.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `${hours}h ${minutes}m`;
+    return 'Daily between 7 AM - 11 PM';
   };
 
   if (loading) {
@@ -325,83 +303,37 @@ const Home = () => {
       </header>
 
       <main className="max-w-2xl mx-auto p-4 space-y-6">
-        {/* Trio Reveal Animation */}
-        {showTrioReveal && currentTrio && (
-          <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="text-center space-y-6 p-8">
-              <div className="animate-bounce">
-                <Sparkles className="h-16 w-16 mx-auto text-primary" />
-              </div>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                  New Trio Formed!
-                </h2>
-                <p className="text-muted-foreground">You've been matched with new people today</p>
-              </div>
-              <div className="flex justify-center gap-4">
-                {currentTrio.profiles.slice(0, 3).map((profile, index) => (
-                  <div key={profile.id} className="text-center animate-fade-in" style={{ animationDelay: `${index * 200}ms` }}>
-                    <Avatar className="h-16 w-16 mb-2 mx-auto ring-2 ring-primary/20">
-                      <AvatarImage src={profile.avatar_url || undefined} />
-                      <AvatarFallback className="text-lg">
-                        {profile.username.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <p className="font-medium text-sm">{profile.username}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Countdown Timer */}
-        <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-muted-foreground" />
-              <RefreshCw className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Next trio randomization in</p>
-              <p className="font-semibold">{getTimeUntilNextTrio()}</p>
-              <p className="text-xs text-muted-foreground">New groups form daily between 7 AM - 11 PM</p>
-            </div>
-          </CardContent>
-        </Card>
-
         {currentTrio ? (
           <>
             {/* Trio Panel */}
-            <Card className={showTrioReveal ? "ring-2 ring-primary/50 animate-pulse" : ""}>
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
                   Today's Trio
-                  <Sparkles className="h-4 w-4 text-primary animate-pulse" />
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Your randomized group for today - share, chat, and connect!
                 </p>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-6 justify-center">
+                <div className="flex gap-4 justify-center">
                   {currentTrio.profiles.map((profile) => (
-                    <div key={profile.id} className="flex flex-col items-center gap-3">
-                      <Avatar className="h-20 w-20 ring-2 ring-primary/20">
+                    <div key={profile.id} className="flex flex-col items-center gap-2">
+                      <Avatar className="h-16 w-16">
                         <AvatarImage src={profile.avatar_url || undefined} />
-                        <AvatarFallback className="text-lg font-semibold">
+                        <AvatarFallback>
                           {profile.username.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="text-center">
-                        <p className="font-semibold">{profile.username}</p>
+                        <p className="font-medium text-sm">{profile.username}</p>
                         {profile.bio && (
                           <p className="text-xs text-muted-foreground">{profile.bio}</p>
                         )}
                       </div>
                       {profile.user_id === user?.id && (
-                        <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">You</Badge>
+                        <Badge variant="secondary" className="text-xs">You</Badge>
                       )}
                     </div>
                   ))}
@@ -522,14 +454,11 @@ const Home = () => {
           </>
         ) : (
           <Card>
-            <CardContent className="p-8 text-center space-y-4">
-              <div className="animate-pulse">
-                <RefreshCw className="h-12 w-12 mx-auto text-muted-foreground" />
-              </div>
-              <h2 className="text-xl font-semibold">No trio assigned yet</h2>
+            <CardContent className="p-8 text-center">
+              <h2 className="text-xl font-semibold mb-2">No trio assigned yet</h2>
               <p className="text-muted-foreground">
                 New trios are formed daily between 7 AM - 11 PM.<br />
-                Check back soon for your random trio assignment!
+                Check back throughout the day!
               </p>
             </CardContent>
           </Card>
