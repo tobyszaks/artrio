@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Send, Users, Settings, Shield } from 'lucide-react';
+import { LogOut, Send, Users, Settings, Shield, Bell } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
+import NotificationBell from '@/components/NotificationBell';
 
 interface Profile {
   id: string;
@@ -51,6 +53,7 @@ const Home = () => {
   const { user, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isSubscribed } = useRealtimeNotifications();
   const [currentTrio, setCurrentTrio] = useState<Trio | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [replies, setReplies] = useState<Reply[]>([]);
@@ -299,8 +302,16 @@ const Home = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card p-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Random Trios</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">Random Groups</h1>
+            {isSubscribed && (
+              <Badge variant="outline" className="text-xs">
+                🔔 Live
+              </Badge>
+            )}
+          </div>
           <div className="flex items-center gap-2">
+            <NotificationBell />
             {isAdmin && (
               <Button variant="outline" size="sm" onClick={() => navigate('/admin')}>
                 <Shield className="h-4 w-4 mr-2" />

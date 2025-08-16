@@ -107,6 +107,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          metadata: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          metadata?: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          metadata?: Json | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           content: string | null
@@ -356,6 +389,10 @@ export type Database = {
       }
       cleanup_expired_content: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_group_notifications: {
+        Args: { p_trio_id: string }
         Returns: undefined
       }
       get_random_cron_time: {
