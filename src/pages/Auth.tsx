@@ -5,11 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -20,11 +17,10 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
-  const [birthday, setBirthday] = useState<Date>();
+  const [birthdayText, setBirthdayText] = useState('');
   const [bio, setBio] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ageError, setAgeError] = useState('');
-  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear() - 20); // Start 20 years back
 
   // Redirect if already authenticated
   if (user) {
@@ -48,6 +44,23 @@ const Auth = () => {
       return age - 1;
     }
     return age;
+  };
+
+  const parseBirthday = (dateString: string): Date | null => {
+    // Expected format: MM/DD/YYYY
+    const parts = dateString.split('/');
+    if (parts.length !== 3) return null;
+    
+    const month = parseInt(parts[0]) - 1; // Month is 0-indexed
+    const day = parseInt(parts[1]);
+    const year = parseInt(parts[2]);
+    
+    if (isNaN(month) || isNaN(day) || isNaN(year)) return null;
+    if (month < 0 || month > 11) return null;
+    if (day < 1 || day > 31) return null;
+    if (year < 1900 || year > new Date().getFullYear()) return null;
+    
+    return new Date(year, month, day);
   };
 
   const checkAgeRestriction = async (birthDate: Date) => {
@@ -89,10 +102,20 @@ const Auth = () => {
 
     try {
       if (isSignUp) {
+        if (!birthdayText.trim()) {
+          toast({
+            title: 'Error',
+            description: 'Please enter your birthday',
+            variant: 'destructive'
+          });
+          return;
+        }
+
+        const birthday = parseBirthday(birthdayText);
         if (!birthday) {
           toast({
             title: 'Error',
-            description: 'Please select your birthday',
+            description: 'Please enter a valid birthday in MM/DD/YYYY format',
             variant: 'destructive'
           });
           return;
@@ -194,75 +217,19 @@ const Auth = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Birthday</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !birthday && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {birthday ? format(birthday, "PPP") : <span>Pick your birthday</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <div className="flex items-center justify-between p-3 border-b">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCalendarYear(calendarYear - 10)}
-                          className="h-7"
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                          <ChevronLeft className="h-4 w-4 -ml-1" />
-                        </Button>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCalendarYear(calendarYear - 1)}
-                            className="h-7"
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </Button>
-                          <span className="text-sm font-medium min-w-[60px] text-center">
-                            {calendarYear}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCalendarYear(calendarYear + 1)}
-                            disabled={calendarYear >= new Date().getFullYear()}
-                            className="h-7"
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCalendarYear(calendarYear + 10)}
-                          disabled={calendarYear + 10 > new Date().getFullYear()}
-                          className="h-7"
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                          <ChevronRight className="h-4 w-4 -ml-1" />
-                        </Button>
-                      </div>
-                      <Calendar
-                        mode="single"
-                        selected={birthday}
-                        onSelect={setBirthday}
-                        disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                        defaultMonth={new Date(calendarYear, 0)}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <Label htmlFor="birthday">Birthday</Label>
+                  <Input
+                    id="birthday"
+                    type="text"
+                    value={birthdayText}
+                    onChange={(e) => setBirthdayText(e.target.value)}
+                    required
+                    placeholder="MM/DD/YYYY"
+                    maxLength={10}
+                  />
+                  <div className="text-xs text-muted-foreground">
+                    Enter your birthday in MM/DD/YYYY format
+                  </div>
                   {ageError && (
                     <div className="flex items-center gap-2 text-sm text-destructive">
                       <AlertCircle className="h-4 w-4" />
