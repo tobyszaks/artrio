@@ -351,7 +351,7 @@ const Home = () => {
       <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-bold">Rantrio</h1>
+            <h1 className="text-lg font-bold">Artrio</h1>
             {isSubscribed && (
               <Badge variant="outline" className="text-xs px-1 py-0">
                 Live
