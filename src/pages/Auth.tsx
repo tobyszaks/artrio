@@ -133,9 +133,20 @@ const Auth = () => {
         });
 
         if (error) {
+          // Provide more specific error messages
+          let errorMessage = error.message;
+          
+          if (error.message.includes('duplicate') || error.message.includes('unique') || error.message.includes('already registered')) {
+            errorMessage = 'This username or email is already taken. Please try another.';
+          } else if (error.message.includes('Database error')) {
+            errorMessage = 'Username might be taken. Please try a different username.';
+          } else if (error.message.includes('profiles')) {
+            errorMessage = 'Could not create profile. Username might be taken.';
+          }
+          
           toast({
             title: 'Sign Up Error',
-            description: error.message,
+            description: errorMessage,
             variant: 'destructive'
           });
         } else {
