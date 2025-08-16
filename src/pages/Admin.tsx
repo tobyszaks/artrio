@@ -18,7 +18,7 @@ interface AdminStats {
   recentUsers: Array<{
     username: string;
     created_at: string;
-    age: number;
+    ageRange: string;
   }>;
 }
 
@@ -119,7 +119,7 @@ const Admin = () => {
       const recentUsers = recentProfiles?.map(profile => ({
         username: profile.username,
         created_at: profile.created_at,
-        age: calculateAge(profile.birthday)
+        ageRange: getAgeRange(profile.birthday)
       })) || [];
 
       setStats({
@@ -143,7 +143,7 @@ const Admin = () => {
     }
   };
 
-  const calculateAge = (birthday: string): number => {
+  const getAgeRange = (birthday: string): string => {
     const birthDate = new Date(birthday);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -151,7 +151,12 @@ const Admin = () => {
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
-    return age;
+    
+    if (age >= 15 && age <= 17) return '15-17';
+    if (age >= 18 && age <= 21) return '18-21';
+    if (age >= 22 && age <= 25) return '22-25';
+    if (age >= 26) return '26+';
+    return 'Unknown';
   };
 
   if (loading) {
@@ -258,7 +263,7 @@ const Admin = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">
-                      Age: {user.age}
+                      {user.ageRange}
                     </Badge>
                   </div>
                 </div>
