@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,6 +21,9 @@ const Auth = () => {
   const [bio, setBio] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ageError, setAgeError] = useState('');
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [usernameDebounceTimer, setUsernameDebounceTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Redirect if already authenticated
   if (user) {
@@ -61,6 +64,59 @@ const Auth = () => {
     if (year < 1900 || year > new Date().getFullYear()) return null;
     
     return new Date(year, month, day);
+  };
+
+  const checkUsernameAvailability = async (usernameToCheck: string) => {
+    if (!usernameToCheck || usernameToCheck.length < 3) {
+      setUsernameAvailable(null);
+      return true;
+    }
+
+    setCheckingUsername(true);
+    try {
+      // Check if username exists in profiles table
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', usernameToCheck)
+        .single();
+
+      if (error && error.code === 'PGRST116') {
+        // No rows found - username is available
+        setUsernameAvailable(true);
+        return true;
+      } else if (data) {
+        // Username exists
+        setUsernameAvailable(false);
+        return false;
+      }
+      
+      setUsernameAvailable(true);
+      return true;
+    } catch (error) {
+      console.error('Error checking username:', error);
+      setUsernameAvailable(null);
+      return true; // Allow submission to continue
+    } finally {
+      setCheckingUsername(false);
+    }
+  };
+
+  const generateUniqueUsername = async (baseUsername: string): Promise<string> => {
+    let attemptUsername = baseUsername;
+    let counter = 1;
+    
+    while (counter < 100) {
+      const isAvailable = await checkUsernameAvailability(attemptUsername);
+      if (isAvailable) {
+        return attemptUsername;
+      }
+      attemptUsername = `${baseUsername}${Math.floor(Math.random() * 9999)}`;
+      counter++;
+    }
+    
+    // Fallback with timestamp
+    return `${baseUsername}_${Date.now()}`;
   };
 
   const checkAgeRestriction = async (birthDate: Date) => {
@@ -126,8 +182,26 @@ const Auth = () => {
           return;
         }
 
+        // Check username availability first
+        const isUsernameAvailable = await checkUsernameAvailability(username);
+        let finalUsername = username;
+        
+        if (!isUsernameAvailable) {
+          // Auto-generate a unique username
+          toast({
+            title: 'Username taken',
+            description: 'Finding an available username for you...',
+          });
+          finalUsername = await generateUniqueUsername(username);
+          setUsername(finalUsername);
+          toast({
+            title: 'Username updated',
+            description: `Your username has been changed to: ${finalUsername}`,
+          });
+        }
+
         const { error } = await signUp(email, password, {
-          username,
+          username: finalUsername,
           birthday: format(birthday, 'yyyy-MM-dd'),
           bio
         });
@@ -137,11 +211,39 @@ const Auth = () => {
           let errorMessage = error.message;
           
           if (error.message.includes('duplicate') || error.message.includes('unique') || error.message.includes('already registered')) {
-            errorMessage = 'This username or email is already taken. Please try another.';
-          } else if (error.message.includes('Database error')) {
-            errorMessage = 'Username might be taken. Please try a different username.';
-          } else if (error.message.includes('profiles')) {
-            errorMessage = 'Could not create profile. Username might be taken.';
+            // Try with auto-generated username
+            const newUsername = await generateUniqueUsername(username);
+            const retryResult = await signUp(email, password, {
+              username: newUsername,
+              birthday: format(birthday, 'yyyy-MM-dd'),
+              bio
+            });
+            
+            if (!retryResult.error) {
+              toast({
+                title: 'Success!',
+                description: `Account created with username: ${newUsername}. Check your email to confirm.`
+              });
+              return;
+            }
+            errorMessage = 'This email might already be registered. Try signing in instead.';
+          } else if (error.message.includes('Database error') || error.message.includes('profiles')) {
+            // Database error - try with modified username
+            const newUsername = `${username}${Math.floor(Math.random() * 9999)}`;
+            const retryResult = await signUp(email, password, {
+              username: newUsername,
+              birthday: format(birthday, 'yyyy-MM-dd'),
+              bio
+            });
+            
+            if (!retryResult.error) {
+              toast({
+                title: 'Success!',
+                description: `Account created with username: ${newUsername}. Check your email to confirm.`
+              });
+              return;
+            }
+            errorMessage = 'Could not create account. Please try again with a different username.';
           }
           
           toast({
@@ -217,14 +319,58 @@ const Auth = () => {
               <>
                 <div className="space-y-2">
                   <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                    placeholder="Choose a username"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="username"
+                      type="text"
+                      value={username}
+                      onChange={(e) => {
+                        const newUsername = e.target.value;
+                        setUsername(newUsername);
+                        
+                        // Clear previous timer
+                        if (usernameDebounceTimer) {
+                          clearTimeout(usernameDebounceTimer);
+                        }
+                        
+                        // Set new timer for debounced check
+                        if (newUsername.length >= 3) {
+                          const timer = setTimeout(() => {
+                            checkUsernameAvailability(newUsername);
+                          }, 500);
+                          setUsernameDebounceTimer(timer);
+                        } else {
+                          setUsernameAvailable(null);
+                        }
+                      }}
+                      required
+                      placeholder="Choose a username"
+                      className={`pr-10 ${
+                        usernameAvailable === false ? 'border-destructive' : 
+                        usernameAvailable === true ? 'border-green-500' : ''
+                      }`}
+                    />
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                      {checkingUsername && (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                      {!checkingUsername && usernameAvailable === true && username.length >= 3 && (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      )}
+                      {!checkingUsername && usernameAvailable === false && (
+                        <XCircle className="h-4 w-4 text-destructive" />
+                      )}
+                    </div>
+                  </div>
+                  {usernameAvailable === false && (
+                    <p className="text-xs text-destructive">Username is already taken</p>
+                  )}
+                  {usernameAvailable === true && username.length >= 3 && (
+                    <p className="text-xs text-green-600">Username is available!</p>
+                  )}
+                  {username.length > 0 && username.length < 3 && (
+                    <p className="text-xs text-muted-foreground">Username must be at least 3 characters</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
