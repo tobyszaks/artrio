@@ -354,7 +354,11 @@ const Home = () => {
               <CardContent>
                 <div className="flex gap-3 overflow-x-auto pb-2">
                   {currentTrio.profiles.map((profile) => (
-                    <div key={profile.id} className="flex flex-col items-center gap-2 min-w-0 flex-shrink-0">
+                    <div 
+                      key={profile.id} 
+                      className="flex flex-col items-center gap-2 min-w-0 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => navigate(`/user/${profile.user_id}`)}
+                    >
                       <Avatar className="h-12 w-12">
                         <AvatarImage src={profile.avatar_url || undefined} />
                         <AvatarFallback>
