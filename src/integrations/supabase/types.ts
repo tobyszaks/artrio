@@ -185,7 +185,6 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
-          birthday: string
           created_at: string
           id: string
           updated_at: string
@@ -195,7 +194,6 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
-          birthday: string
           created_at?: string
           id?: string
           updated_at?: string
@@ -205,7 +203,6 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
-          birthday?: string
           created_at?: string
           id?: string
           updated_at?: string
@@ -324,6 +321,30 @@ export type Database = {
         }
         Relationships: []
       }
+      sensitive_user_data: {
+        Row: {
+          birthday: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          birthday: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          birthday?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trios: {
         Row: {
           created_at: string
@@ -406,6 +427,10 @@ export type Database = {
     Functions: {
       calculate_age: {
         Args: { birth_date: string }
+        Returns: number
+      }
+      calculate_age_secure: {
+        Args: { target_user_id: string }
         Returns: number
       }
       can_user_post: {
