@@ -20,11 +20,8 @@ export function usePresence() {
 
     // Update user's own presence in database
     const updateOwnPresence = async (isOnline: boolean) => {
-      try {
-        await supabase.rpc('update_user_presence', { p_is_online: isOnline });
-      } catch (error) {
-        console.error('Error updating presence:', error);
-      }
+      // Presence tracking temporarily disabled
+      // TODO: Implement user presence tracking
     };
 
     // Set user as online
