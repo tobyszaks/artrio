@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { User, Session, RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -20,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [presenceChannel, setPresenceChannel] = useState<RealtimeChannel | null>(null);
+  const userRef = useRef<User | null>(null);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -27,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        userRef.current = session?.user ?? null;
         
         // Check admin status when user changes
         if (session?.user) {
@@ -36,8 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setIsAdmin(false);
           // Update presence when user logs out
-          if (user) {
-            await updatePresence(false, user.id);
+          if (userRef.current) {
+            await updatePresence(false, userRef.current.id);
           }
         }
         
@@ -49,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      userRef.current = session?.user ?? null;
       
       if (session?.user) {
         checkAdminStatus(session.user.id);
@@ -60,8 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Handle page visibility changes
     const handleVisibilityChange = () => {
-      if (user) {
-        updatePresence(!document.hidden, user.id);
+      if (userRef.current) {
+        updatePresence(!document.hidden, userRef.current.id);
       }
     };
 
@@ -69,8 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Send heartbeat every 30 seconds to maintain presence
     const heartbeatInterval = setInterval(() => {
-      if (user && !document.hidden) {
-        updatePresence(true, user.id);
+      if (userRef.current && !document.hidden) {
+        updatePresence(true, userRef.current.id);
       }
     }, 30000);
 
@@ -79,11 +82,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(heartbeatInterval);
-      if (user) {
-        updatePresence(false, user.id);
+      if (userRef.current) {
+        updatePresence(false, userRef.current.id);
       }
     };
-  }, [user]);
+  }, []);
 
   const updatePresence = async (isOnline: boolean, userId?: string) => {
     // Presence tracking temporarily disabled
