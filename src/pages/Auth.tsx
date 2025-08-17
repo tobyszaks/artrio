@@ -230,15 +230,16 @@ const Auth = () => {
         } else {
           toast({
             title: 'Success!',
-            description: 'Check your email to confirm your account. You may need to check your spam folder.'
+            description: 'Account created! You can now sign in.'
           });
           
-          // Clear form
+          // Clear form and switch to sign in
           setEmail('');
           setPassword('');
           setUsername('');
           setBirthdayText('');
           setBio('');
+          setIsSignUp(false); // Switch to sign in mode
         }
       } else {
         const { error } = await signIn(email, password);

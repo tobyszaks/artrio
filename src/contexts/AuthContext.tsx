@@ -67,16 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, userData: { username: string; birthday: string; bio?: string }) => {
-    // Use Railway URL for production, or fallback to current origin
-    const redirectUrl = import.meta.env.VITE_APP_URL || 
-                       'https://artrio-production.up.railway.app' || 
-                       `${window.location.origin}/`;
-    
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
         data: {
           username: userData.username,
           birthday: userData.birthday,
