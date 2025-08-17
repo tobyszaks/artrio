@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { User, Session, RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
@@ -19,19 +19,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [presenceChannel, setPresenceChannel] = useState<RealtimeChannel | null>(null);
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
         // Check admin status when user changes
         if (session?.user) {
           checkAdminStatus(session.user.id);
+          // Update presence when user logs in
+          await updatePresence(true, session.user.id);
         } else {
           setIsAdmin(false);
+          // Update presence when user logs out
+          if (user) {
+            await updatePresence(false, user.id);
+          }
         }
         
         setLoading(false);
@@ -39,19 +46,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
         checkAdminStatus(session.user.id);
+        await updatePresence(true, session.user.id);
       }
       
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    // Handle page visibility changes
+    const handleVisibilityChange = () => {
+      if (user) {
+        updatePresence(!document.hidden, user.id);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Send heartbeat every 30 seconds to maintain presence
+    const heartbeatInterval = setInterval(() => {
+      if (user && !document.hidden) {
+        updatePresence(true, user.id);
+      }
+    }, 30000);
+
+    // Cleanup on unmount
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(heartbeatInterval);
+      if (user) {
+        updatePresence(false, user.id);
+      }
+    };
+  }, [user]);
+
+  const updatePresence = async (isOnline: boolean, userId?: string) => {
+    if (!userId) return;
+    
+    try {
+      await supabase.rpc('update_user_presence', { p_is_online: isOnline });
+    } catch (error) {
+      console.error('Error updating presence:', error);
+    }
+  };
 
   const checkAdminStatus = async (userId: string) => {
     try {

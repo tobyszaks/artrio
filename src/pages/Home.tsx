@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import NotificationBell from '@/components/NotificationBell';
 import MediaUpload from '@/components/MediaUpload';
+import { usePresence } from '@/hooks/usePresence';
 
 interface Profile {
   id: string;
@@ -56,6 +57,7 @@ const Home = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isSubscribed } = useRealtimeNotifications();
+  const { isUserOnline } = usePresence();
   const [currentTrio, setCurrentTrio] = useState<Trio | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [replies, setReplies] = useState<Reply[]>([]);
@@ -397,12 +399,17 @@ const Home = () => {
                       className="flex flex-col items-center gap-2 min-w-0 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={() => navigate(`/user/${profile.user_id}`)}
                     >
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={profile.avatar_url || undefined} />
-                        <AvatarFallback>
-                          {profile.username.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div className="relative">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={profile.avatar_url || undefined} />
+                          <AvatarFallback>
+                            {profile.username.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        {isUserOnline(profile.user_id) && (
+                          <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-background rounded-full" />
+                        )}
+                      </div>
                       <div className="text-center min-w-0">
                         <p className="font-medium text-sm truncate w-16">{profile.username}</p>
                         {profile.user_id === user?.id && (
