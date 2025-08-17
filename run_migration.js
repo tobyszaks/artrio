@@ -21,7 +21,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 async function runMigration() {
   try {
     // Read the migration file
-    const migration = fs.readFileSync('/Users/tyler/rantrio/supabase/migrations/20250817000001_add_direct_messages.sql', 'utf8');
+    const migration = fs.readFileSync('/Users/tyler/artrio/supabase/migrations/20250817000001_add_direct_messages.sql', 'utf8');
     
     console.log('🚀 Running DM migration...');
     
