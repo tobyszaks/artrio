@@ -268,18 +268,30 @@ const Auth = () => {
             variant: 'destructive'
           });
         } else {
-          toast({
-            title: 'Success!',
-            description: 'Account created! You can now sign in.'
-          });
+          // Auto sign in after successful signup
+          const { error: signInError } = await signIn(email, password);
           
-          // Clear form and switch to sign in
+          if (signInError) {
+            // If auto-login fails, still show success but mention they need to sign in
+            toast({
+              title: 'Account created!',
+              description: 'Please sign in with your new account.'
+            });
+            setIsSignUp(false);
+          } else {
+            toast({
+              title: 'Welcome to Artrio!',
+              description: 'Your account has been created and you\'re now logged in.'
+            });
+            // User will be redirected automatically by the auth state change
+          }
+          
+          // Clear form
           setEmail('');
           setPassword('');
           setUsername('');
           setBirthdayText('');
           setBio('');
-          setIsSignUp(false); // Switch to sign in mode
         }
       } else {
         const { error } = await signIn(email, password);

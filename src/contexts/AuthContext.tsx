@@ -83,6 +83,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: authError };
     }
 
+    // If signup succeeded and we have a session, user is logged in
+    if (authData?.session) {
+      // User is already logged in with the session
+      setSession(authData.session);
+      setUser(authData.user);
+    }
+
     // If signup succeeded but user exists (email already registered)
     if (authData?.user && !authError) {
       // Try to manually create profile if it doesn't exist
