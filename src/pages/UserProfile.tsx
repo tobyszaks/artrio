@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Calendar, User, Share, UserX, UserCheck, Copy } from 'lucide-react';
+import { ArrowLeft, Calendar, User, Share, UserX, UserCheck, Copy, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -289,6 +289,14 @@ const UserProfile = () => {
                 ) : (
                   <>
                     <div className="flex gap-2">
+                      <Button 
+                        onClick={() => navigate(`/messages?user=${userId}`)}
+                        variant="default"
+                        className="flex-1"
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Message
+                      </Button>
                       <Button 
                         onClick={handleShare}
                         variant="outline"

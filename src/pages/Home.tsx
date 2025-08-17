@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Send, Users, Settings, Shield, Bell } from 'lucide-react';
+import { LogOut, Send, Users, Settings, Shield, Bell, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -360,6 +360,9 @@ const Home = () => {
           </div>
           <div className="flex items-center gap-1">
             <NotificationBell />
+            <Button variant="ghost" size="sm" onClick={() => navigate('/messages')} className="h-8 px-2">
+              <MessageSquare className="h-4 w-4" />
+            </Button>
             {isAdmin && (
               <Button variant="ghost" size="sm" onClick={() => navigate('/admin')} className="h-8 px-2">
                 <Shield className="h-4 w-4" />

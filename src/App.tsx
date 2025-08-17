@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
 import Admin from "./pages/Admin";
+import Messages from "./pages/Messages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -50,6 +51,11 @@ const App = () => {
               <Route path="/admin" element={
                 <ProtectedRoute>
                   <Admin />
+                </ProtectedRoute>
+              } />
+              <Route path="/messages" element={
+                <ProtectedRoute>
+                  <Messages />
                 </ProtectedRoute>
               } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
