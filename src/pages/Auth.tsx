@@ -14,6 +14,7 @@ const Auth = () => {
   const { user, signUp, signIn, loading } = useAuth();
   const { toast } = useToast();
   const [isSignUp, setIsSignUp] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -151,8 +152,47 @@ const Auth = () => {
     return true;
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive'
+        });
+      } else {
+        toast({
+          title: 'Check your email',
+          description: 'We sent you a password reset link. Check your email inbox (and spam folder).',
+        });
+        setEmail('');
+        setIsForgotPassword(false);
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to send reset email',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isForgotPassword) {
+      return handleForgotPassword(e);
+    }
+    
     setIsSubmitting(true);
     setAgeError('');
 
@@ -269,7 +309,11 @@ const Auth = () => {
         <CardHeader>
           <CardTitle className="text-2xl text-center">Artrio</CardTitle>
           <CardDescription className="text-center">
-            {isSignUp ? 'Create your account to join daily conversations' : 'Welcome back to Artrio'}
+            {isForgotPassword 
+              ? 'Reset your password' 
+              : isSignUp 
+                ? 'Create your account to join daily conversations' 
+                : 'Welcome back to Artrio'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -286,20 +330,22 @@ const Auth = () => {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="Enter your password"
-                minLength={6}
-              />
-            </div>
+            {!isForgotPassword && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="Enter your password"
+                  minLength={6}
+                />
+              </div>
+            )}
 
-            {isSignUp && (
+            {isSignUp && !isForgotPassword && (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="username">Username</Label>
@@ -397,17 +443,43 @@ const Auth = () => {
             )}
 
             <Button type="submit" className="w-full" disabled={isSubmitting || !!ageError}>
-              {isSubmitting ? 'Please wait...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+              {isSubmitting 
+                ? 'Please wait...' 
+                : isForgotPassword 
+                  ? 'Send Reset Email' 
+                  : (isSignUp ? 'Sign Up' : 'Sign In')}
             </Button>
 
-            <div className="text-center">
+            <div className="text-center space-y-2">
+              {!isForgotPassword && !isSignUp && (
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={() => setIsForgotPassword(true)}
+                  className="text-sm w-full"
+                >
+                  Forgot your password?
+                </Button>
+              )}
+              
               <Button
                 type="button"
                 variant="link"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm"
+                onClick={() => {
+                  if (isForgotPassword) {
+                    setIsForgotPassword(false);
+                    setIsSignUp(false);
+                  } else {
+                    setIsSignUp(!isSignUp);
+                  }
+                }}
+                className="text-sm w-full"
               >
-                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                {isForgotPassword 
+                  ? 'Back to sign in' 
+                  : isSignUp 
+                    ? 'Already have an account? Sign in' 
+                    : "Don't have an account? Sign up"}
               </Button>
             </div>
           </form>
