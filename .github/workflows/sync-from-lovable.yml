@@ -24,22 +24,8 @@ jobs:
       
       - name: Add Toby's repo as remote
         run: |
-          # Try both possible repo names (rantrio and artrio)
           git remote remove lovable 2>/dev/null || true
-          
-          # First try rantrio (original name)
-          if git ls-remote https://github.com/tobyszaks/rantrio.git 2>/dev/null; then
-            echo "Found tobyszaks/rantrio - using that"
-            git remote add lovable https://github.com/tobyszaks/rantrio.git
-          # Then try artrio (new name)  
-          elif git ls-remote https://github.com/tobyszaks/artrio.git 2>/dev/null; then
-            echo "Found tobyszaks/artrio - using that"
-            git remote add lovable https://github.com/tobyszaks/artrio.git
-          else
-            echo "ERROR: Could not find Toby's repository under either name"
-            exit 1
-          fi
-          
+          git remote add lovable https://github.com/tobyszaks/artrio.git
           git fetch lovable main --no-tags
       
       - name: Check for changes
